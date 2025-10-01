@@ -1,30 +1,19 @@
-document.querySelectorAll('[data-modal]').forEach((trigger) => {
-  trigger.addEventListener('click', () => {
-    const modal = document.getElementById(trigger.dataset.modal);
-    if (modal) {
-      modal.classList.add('active');
-    }
-  });
-});
-
-document.querySelectorAll('.modal').forEach((modal) => {
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal || event.target.hasAttribute('data-close')) {
-      modal.classList.remove('active');
-    }
-  });
-});
-
-const nav = document.querySelector('.main-nav');
-const hero = document.querySelector('.hero');
-if (nav && hero) {
-  const toggleShadow = () => {
-    if (window.scrollY > hero.offsetHeight - nav.offsetHeight) {
-      nav.classList.add('scrolled');
+document.addEventListener('DOMContentLoaded', () => {
+  const navbar = document.querySelector('.navbar');
+  const updateNavbarState = () => {
+    if (!navbar) return;
+    if (window.scrollY > 50) {
+      navbar.classList.add('navbar-scrolled');
     } else {
-      nav.classList.remove('scrolled');
+      navbar.classList.remove('navbar-scrolled');
     }
   };
-  document.addEventListener('scroll', toggleShadow);
-  toggleShadow();
-}
+
+  updateNavbarState();
+  document.addEventListener('scroll', updateNavbarState);
+
+  const yearHolder = document.querySelector('[data-current-year]');
+  if (yearHolder) {
+    yearHolder.textContent = new Date().getFullYear().toString();
+  }
+});
