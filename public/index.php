@@ -1,6 +1,7 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../config/config.php';
 
+$settings = get_settings();
 $hero = fetchOne('SELECT * FROM hero LIMIT 1');
 $pilates = fetchOne('SELECT * FROM about_pilates LIMIT 1');
 $history = fetchOne('SELECT * FROM history LIMIT 1');
@@ -12,53 +13,57 @@ $schedule = fetchAll('SELECT * FROM schedule_entries ORDER BY day_order, start_t
 $faq = fetchAll('SELECT * FROM faq ORDER BY sort_order, id');
 $footerLinks = fetchAll('SELECT * FROM footer_links ORDER BY position ASC');
 
+$siteName = setting('site_name', 'Pi Studio Pilates');
+$siteLanguage = setting('language', 'tr');
+$logoPath = setting('logo');
+$logoUrl = $logoPath ? media_url($logoPath) : null;
+$tagline = $hero['subtitle'] ?? 'Vücudunu güçlendir, nefesinle ak.';
+$contactEmail = setting('contact_email', 'info@pistudiopilates.com');
+$contactPhone = setting('contact_phone', '+90 530 111 22 33');
+$instagramUrl = setting('instagram_url', 'https://www.instagram.com');
+$whatsappNumber = setting('whatsapp_number', '+90 530 111 22 33');
+$address = $hero['address'] ?? setting('address', 'Bağdat Caddesi No:123, İstanbul');
+$whatsappLink = whatsapp_link($whatsappNumber) ?: 'https://wa.me/905301112233';
+
 function dayLabel(int $dayOrder): string
 {
     $days = [1 => 'Pazartesi', 2 => 'Salı', 3 => 'Çarşamba', 4 => 'Perşembe', 5 => 'Cuma', 6 => 'Cumartesi', 7 => 'Pazar'];
     return $days[$dayOrder] ?? '';
 }
 
-function mediaUrl(?string $path, ?string $fallback = null): string
-{
-    if ($path) {
-        if (preg_match('/^https?:/i', $path)) {
-            return $path;
-        }
-        return ASSET_PATH . 'img/' . ltrim($path, '/');
-    }
-    if ($fallback) {
-        return $fallback;
-    }
-    return ASSET_PATH . 'img/placeholder.svg';
-}
-
 ?><!DOCTYPE html>
-<html lang="tr">
+<html lang="<?= htmlspecialchars($siteLanguage); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($hero['title'] ?? 'Pi Studio Pilates'); ?></title>
-    <meta name="description" content="<?= htmlspecialchars($hero['subtitle'] ?? 'Pi Studio Pilates - Vücudunu güçlendir, nefesinle ak.'); ?>">
-    <meta property="og:title" content="<?= htmlspecialchars($hero['title'] ?? 'Pi Studio Pilates'); ?>">
-    <meta property="og:description" content="<?= htmlspecialchars($hero['subtitle'] ?? 'Vücudunu güçlendir, nefesinle ak.'); ?>">
-    <meta property="og:image" content="<?= htmlspecialchars(mediaUrl($hero['background_media'] ?? null)); ?>">
-    <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/styles.css">
+    <title><?= htmlspecialchars($hero['title'] ?? $siteName); ?></title>
+    <meta name="description" content="<?= htmlspecialchars($tagline); ?>">
+    <meta property="og:title" content="<?= htmlspecialchars($hero['title'] ?? $siteName); ?>">
+    <meta property="og:description" content="<?= htmlspecialchars($tagline); ?>">
+    <meta property="og:image" content="<?= htmlspecialchars(media_url($hero['background_media'] ?? null)); ?>">
+    <link rel="stylesheet" href="<?= ASSET_URL ?>css/styles.css">
 </head>
 <body>
-<header class="hero" style="background-image: url('<?= htmlspecialchars(mediaUrl($hero['background_media'] ?? null)); ?>');">
+<header class="hero" style="background-image: url('<?= htmlspecialchars(media_url($hero['background_media'] ?? null)); ?>');">
     <div class="overlay"></div>
     <div class="hero-content">
-        <h1><?= htmlspecialchars($hero['title'] ?? 'Pi Studio Pilates'); ?></h1>
-        <p><?= nl2br(htmlspecialchars($hero['subtitle'] ?? 'Vücudunu güçlendir, nefesinle ak.')); ?></p>
+        <h1><?= htmlspecialchars($hero['title'] ?? $siteName); ?></h1>
+        <p><?= nl2br(htmlspecialchars($tagline)); ?></p>
         <div class="hero-buttons">
-            <a class="btn primary" href="#contact"><?= htmlspecialchars($hero['cta_primary_text'] ?? 'Deneme Dersi Al'); ?></a>
-            <a class="btn secondary" href="#schedule"><?= htmlspecialchars($hero['cta_secondary_text'] ?? 'Ders Programı'); ?></a>
+            <a class="btn primary" href="<?= htmlspecialchars($hero['cta_primary_link'] ?? '#contact'); ?>"><?= htmlspecialchars($hero['cta_primary_text'] ?? 'Deneme Dersi Al'); ?></a>
+            <a class="btn secondary" href="<?= htmlspecialchars($hero['cta_secondary_link'] ?? '#schedule'); ?>"><?= htmlspecialchars($hero['cta_secondary_text'] ?? 'Ders Programı'); ?></a>
         </div>
     </div>
 </header>
 
 <nav class="main-nav">
-    <div class="logo">Pi Studio Pilates</div>
+    <div class="logo">
+        <?php if ($logoUrl): ?>
+            <img src="<?= htmlspecialchars($logoUrl); ?>" alt="<?= htmlspecialchars($siteName); ?>">
+        <?php else: ?>
+            <?= htmlspecialchars($siteName); ?>
+        <?php endif; ?>
+    </div>
     <ul>
         <li><a href="#about">Pilates Nedir?</a></li>
         <li><a href="#equipments">Ekipmanlar</a></li>
@@ -85,7 +90,7 @@ function mediaUrl(?string $path, ?string $fallback = null): string
             <?php foreach ($equipments as $equipment): ?>
                 <article class="card">
                     <?php if (!empty($equipment['img'])): ?>
-                        <img src="<?= htmlspecialchars(mediaUrl($equipment['img'])); ?>" alt="<?= htmlspecialchars($equipment['title']); ?>">
+                        <img src="<?= htmlspecialchars(media_url($equipment['img'])); ?>" alt="<?= htmlspecialchars($equipment['title']); ?>">
                     <?php endif; ?>
                     <h3><?= htmlspecialchars($equipment['title']); ?></h3>
                     <p><?= nl2br(htmlspecialchars($equipment['description'])); ?></p>
@@ -107,7 +112,7 @@ function mediaUrl(?string $path, ?string $fallback = null): string
     <section id="instructor" class="section split">
         <div class="image-col">
             <?php if (!empty($instructor['photo'])): ?>
-                <img src="<?= htmlspecialchars(mediaUrl($instructor['photo'])); ?>" alt="Pınar Sarı Koçak">
+                <img src="<?= htmlspecialchars(media_url($instructor['photo'])); ?>" alt="Pınar Sarı Koçak">
             <?php endif; ?>
         </div>
         <div class="text-col">
@@ -130,7 +135,7 @@ function mediaUrl(?string $path, ?string $fallback = null): string
             <?php foreach ($trainings as $training): ?>
                 <article class="card">
                     <?php if (!empty($training['img'])): ?>
-                        <img src="<?= htmlspecialchars(mediaUrl($training['img'])); ?>" alt="<?= htmlspecialchars($training['title']); ?>">
+                        <img src="<?= htmlspecialchars(media_url($training['img'])); ?>" alt="<?= htmlspecialchars($training['title']); ?>">
                     <?php endif; ?>
                     <div>
                         <h3><?= htmlspecialchars($training['title']); ?></h3>
@@ -170,7 +175,7 @@ function mediaUrl(?string $path, ?string $fallback = null): string
                     <?php foreach ($schedule as $entry): ?>
                         <tr>
                             <td><?= htmlspecialchars(dayLabel((int)$entry['day_order'])); ?></td>
-                            <td><?= htmlspecialchars(substr($entry['start_time'], 0, 5)); ?></td>
+                            <td><?= htmlspecialchars(format_time($entry['start_time'])); ?></td>
                             <td><?= htmlspecialchars($entry['class_type']); ?></td>
                             <td><?= htmlspecialchars($entry['level']); ?></td>
                         </tr>
@@ -195,14 +200,14 @@ function mediaUrl(?string $path, ?string $fallback = null): string
     <section id="contact" class="section contact">
         <div class="contact-details">
             <h2>İletişim</h2>
-            <p><strong>Telefon:</strong> <a href="tel:+905301112233">+90 530 111 22 33</a></p>
-            <p><strong>E-posta:</strong> <a href="mailto:info@pistudiopilates.com">info@pistudiopilates.com</a></p>
-            <p><strong>Adres:</strong> <?= htmlspecialchars($hero['address'] ?? 'Bağdat Caddesi No:123, İstanbul'); ?></p>
+            <p><strong>Telefon:</strong> <a href="tel:<?= htmlspecialchars(preg_replace('/\s+/', '', $contactPhone)); ?>"><?= htmlspecialchars($contactPhone); ?></a></p>
+            <p><strong>E-posta:</strong> <a href="mailto:<?= htmlspecialchars($contactEmail); ?>"><?= htmlspecialchars($contactEmail); ?></a></p>
+            <p><strong>Adres:</strong> <?= htmlspecialchars($address); ?></p>
             <div class="map">
                 <?php
                 $mapEmbed = $hero['map_embed'] ?? '';
                 if ($mapEmbed && stripos($mapEmbed, '<iframe') !== false) {
-                    echo $mapEmbed; // Güvenilir admin girdisi
+                    echo $mapEmbed;
                 } else {
                     $mapSrc = $mapEmbed ?: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3010.715183116564!2d28.97953!3d41.015137!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDFsw4AwMCcwNi4xIk4gMjjCsDE5JzA2LjMiRQ!5e0!3m2!1str!2str!4v1700000000000';
                     ?>
@@ -241,8 +246,14 @@ function mediaUrl(?string $path, ?string $fallback = null): string
 
 <footer class="footer">
     <div class="footer-col">
-        <div class="logo">Pi Studio Pilates</div>
-        <p>Vücudunu güçlendir, nefesinle ak.</p>
+        <div class="logo">
+            <?php if ($logoUrl): ?>
+                <img src="<?= htmlspecialchars($logoUrl); ?>" alt="<?= htmlspecialchars($siteName); ?>">
+            <?php else: ?>
+                <?= htmlspecialchars($siteName); ?>
+            <?php endif; ?>
+        </div>
+        <p><?= htmlspecialchars($tagline); ?></p>
     </div>
     <div class="footer-col">
         <nav>
@@ -257,8 +268,8 @@ function mediaUrl(?string $path, ?string $fallback = null): string
     </div>
     <div class="footer-col">
         <div class="socials">
-            <a href="https://www.instagram.com" aria-label="Instagram">Instagram</a>
-            <a href="https://wa.me/905301112233" aria-label="WhatsApp">WhatsApp</a>
+            <a href="<?= htmlspecialchars($instagramUrl); ?>" aria-label="Instagram" target="_blank" rel="noopener">Instagram</a>
+            <a href="<?= htmlspecialchars($whatsappLink); ?>" aria-label="WhatsApp" target="_blank" rel="noopener">WhatsApp</a>
         </div>
         <ul class="footer-links">
             <?php foreach ($footerLinks as $link): ?>
@@ -268,7 +279,7 @@ function mediaUrl(?string $path, ?string $fallback = null): string
     </div>
 </footer>
 <div class="whatsapp">
-    <a href="https://wa.me/905301112233" aria-label="WhatsApp" target="_blank">WhatsApp</a>
+    <a href="<?= htmlspecialchars($whatsappLink); ?>" aria-label="WhatsApp" target="_blank" rel="noopener">WhatsApp</a>
 </div>
 
 <?php foreach ($equipments as $equipment): ?>
@@ -283,6 +294,6 @@ function mediaUrl(?string $path, ?string $fallback = null): string
     <?php endif; ?>
 <?php endforeach; ?>
 
-<script src="<?= BASE_URL ?>assets/js/main.js"></script>
+<script src="<?= ASSET_URL ?>js/main.js"></script>
 </body>
 </html>

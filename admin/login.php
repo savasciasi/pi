@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../config/config.php';
 
 if (isLoggedIn()) {
     header('Location: index.php');
@@ -26,11 +26,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 ?><!DOCTYPE html>
-<html lang="tr">
+<html lang="<?= htmlspecialchars(setting('language', 'tr')); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Studio Pilates | Admin Giriş</title>
+    <title><?= htmlspecialchars(setting('site_name', 'Pi Studio Pilates')); ?> | Admin Giriş</title>
     <link rel="stylesheet" href="../assets/css/admin.css">
 </head>
 <body class="auth">

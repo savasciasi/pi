@@ -70,7 +70,7 @@ function getFlash(string $key)
 
 function sanitizeFileName(string $filename): string
 {
-    $clean = preg_replace('/[^A-Za-z0-9\.\-\_]/', '_', $filename);
+    $clean = preg_replace('/[^A-Za-z0-9\.\-_]/', '_', $filename);
     return $clean ?: 'image_' . time();
 }
 
@@ -78,10 +78,6 @@ function handleImageUpload(array $file, ?string $existing = null): ?string
 {
     if (!isset($file['tmp_name']) || $file['error'] !== UPLOAD_ERR_OK) {
         return $existing;
-    }
-
-    if (!is_dir(UPLOAD_DIR)) {
-        mkdir(UPLOAD_DIR, 0755, true);
     }
 
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
@@ -95,8 +91,11 @@ function handleImageUpload(array $file, ?string $existing = null): ?string
         throw new RuntimeException('Dosya yüklenemedi.');
     }
 
-    if ($existing && file_exists(UPLOAD_DIR . $existing) && $existing !== $filename) {
-        @unlink(UPLOAD_DIR . $existing);
+    if ($existing && $existing !== $filename) {
+        $existingPath = UPLOAD_DIR . ltrim($existing, '/');
+        if (file_exists($existingPath)) {
+            @unlink($existingPath);
+        }
     }
 
     return $filename;
@@ -116,4 +115,85 @@ function validateCsrf(string $token): void
         http_response_code(400);
         exit('Geçersiz CSRF token.');
     }
+}
+
+function media_url(?string $path, ?string $fallback = null): string
+{
+    if (!$path) {
+        return $fallback ?: PLACEHOLDER_IMG;
+    }
+
+    if (preg_match('/^https?:/i', $path)) {
+        return $path;
+    }
+
+    if (str_starts_with($path, '/')) {
+        return BASE_URL . ltrim($path, '/');
+    }
+
+    return UPLOAD_URL . ltrim($path, '/');
+}
+
+function get_settings(): array
+{
+    if (!array_key_exists('__settings_cache', $GLOBALS) || $GLOBALS['__settings_cache'] === null) {
+        $GLOBALS['__settings_cache'] = fetchOne('SELECT * FROM settings LIMIT 1') ?: [];
+    }
+
+    return $GLOBALS['__settings_cache'];
+}
+
+function refresh_settings(): void
+{
+    $GLOBALS['__settings_cache'] = null;
+}
+
+function setting(string $key, $default = null)
+{
+    $settings = get_settings();
+    return $settings[$key] ?? $default;
+}
+
+function format_time(string $time): string
+{
+    return substr($time, 0, 5);
+}
+
+function send_contact_mail(string $name, string $email, string $phone, string $preference, string $message): void
+{
+    $to = setting('contact_email', 'info@pistudiopilates.com');
+    $subject = 'Pi Studio Pilates İletişim Formu';
+    $body = "Ad Soyad: {$name}\nE-posta: {$email}\nTelefon: {$phone}\nDers Tercihi: {$preference}\n\nMesaj:\n{$message}";
+    $headers = 'From: ' . $to . "\r\n" . 'Reply-To: ' . $email . "\r\n";
+    @mail($to, $subject, $body, $headers);
+}
+
+function whatsapp_link(?string $number): ?string
+{
+    if (!$number) {
+        return null;
+    }
+
+    $digits = preg_replace('/\D+/', '', $number);
+    if ($digits === '') {
+        return null;
+    }
+
+    if (str_starts_with($digits, '00')) {
+        $digits = substr($digits, 2) ?: '';
+    }
+
+    if ($digits === '') {
+        return null;
+    }
+
+    if ($digits[0] === '0') {
+        $digits = ltrim($digits, '0');
+        if ($digits === '') {
+            return null;
+        }
+        $digits = '90' . $digits;
+    }
+
+    return 'https://wa.me/' . $digits;
 }

@@ -1,10 +1,11 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../config/config.php';
 requireLogin();
 
 $section = basename($_SERVER['PHP_SELF']);
 $menu = [
     'index.php' => 'Genel Bakış',
+    'settings.php' => 'Site Ayarları',
     'hero.php' => 'Hero',
     'content.php' => 'Metinler',
     'equipments.php' => 'Ekipmanlar',
@@ -15,20 +16,23 @@ $menu = [
     'messages.php' => 'Mesajlar',
     'footer-links.php' => 'Footer',
 ];
+
+$siteName = setting('site_name', 'Pi Studio Pilates');
+$adminLang = setting('language', 'tr');
 ?>
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="<?= htmlspecialchars($adminLang); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Studio Pilates | Admin</title>
+    <title><?= htmlspecialchars($siteName); ?> | Admin</title>
     <link rel="stylesheet" href="../assets/css/admin.css">
 </head>
 <body>
 <div class="admin-layout">
     <aside class="sidebar">
         <div>
-            <h2>Pi Studio</h2>
+            <h2><?= htmlspecialchars($siteName); ?></h2>
             <nav>
                 <ul>
                     <?php foreach ($menu as $file => $label): ?>

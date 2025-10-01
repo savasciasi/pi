@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../config/config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php');
@@ -30,6 +30,8 @@ executeQuery('INSERT INTO messages (name, email, phone, preference, message) VAL
     ':preference' => $preference,
     ':message' => $message,
 ]);
+
+send_contact_mail($name, $email, $phone, $preference, $message);
 
 setFlash('contact_form', [
     'type' => 'success',
