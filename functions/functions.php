@@ -117,11 +117,17 @@ function validateCsrf(string $token): void
     }
 }
 
-function img_path_or_fallback(?string $path): string
+function unsplash_placeholder(string $topic = 'pilates studio'): string
 {
-    $placeholder = PLACEHOLDER_IMG;
+    $query = trim($topic) !== '' ? trim($topic) : 'pilates';
+    return 'https://source.unsplash.com/featured/?' . rawurlencode($query);
+}
 
-    if ($path === null || $path === '') {
+function img_path_or_fallback(?string $path, string $topic = 'pilates studio'): string
+{
+    $placeholder = unsplash_placeholder($topic);
+
+    if ($path === null || trim($path) === '') {
         return $placeholder;
     }
 
@@ -130,36 +136,52 @@ function img_path_or_fallback(?string $path): string
     }
 
     $normalized = ltrim($path, '/');
-    $fullPath = dirname(__DIR__) . '/' . $normalized;
 
-    if (is_file($fullPath)) {
-        return $normalized;
+    if ($normalized === '' || str_contains($normalized, '..')) {
+        return $placeholder;
+    }
+
+    $baseDir = dirname(__DIR__) . '/';
+    $candidates = [$normalized];
+
+    if (!str_starts_with($normalized, 'assets/')) {
+        $candidates[] = 'assets/' . $normalized;
+        $candidates[] = 'assets/img/' . $normalized;
+    }
+
+    if (!str_starts_with($normalized, 'assets/img/uploads/')) {
+        $candidates[] = 'assets/img/uploads/' . $normalized;
+    }
+
+    if (str_starts_with($normalized, 'img/uploads/')) {
+        $candidates[] = 'assets/' . $normalized;
+    }
+
+    if (str_starts_with($normalized, 'uploads/')) {
+        $candidates[] = 'assets/img/' . $normalized;
+    }
+
+    foreach (array_unique($candidates) as $candidate) {
+        $fullPath = $baseDir . $candidate;
+        if (is_file($fullPath)) {
+            return $candidate;
+        }
     }
 
     return $placeholder;
 }
 
-function media_url(?string $path, ?string $fallback = null): string
+function media_url(?string $path, ?string $fallback = null, string $topic = 'pilates studio'): string
 {
-    $candidate = $path ?? $fallback ?? PLACEHOLDER_IMG;
+    $candidate = $path ?? $fallback;
+    $resolved = img_path_or_fallback($candidate, $topic);
 
-    if (preg_match('/^https?:\/\//i', $candidate)) {
-        return $candidate;
+    if (preg_match('/^https?:\/\//i', $resolved)) {
+        return $resolved;
     }
 
-    $normalized = ltrim($candidate, '/');
-
-    if (str_starts_with($normalized, 'assets/')) {
-        $assetPath = img_path_or_fallback($candidate);
-
-        if (preg_match('/^https?:\/\//i', $assetPath)) {
-            return $assetPath;
-        }
-
-        return BASE_URL . ltrim($assetPath, '/');
-    }
-
-    return UPLOAD_URL . ltrim($normalized, '/');
+    $normalized = ltrim($resolved, '/');
+    return BASE_URL . $normalized;
 }
 
 function get_settings(): array

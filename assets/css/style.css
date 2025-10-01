@@ -88,15 +88,14 @@ a:hover {
 }
 
 .hero {
+  --hero-image: none;
   position: relative;
   min-height: calc(100vh - 76px);
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  background-image: var(--hero-image);
-  background-size: cover;
-  background-position: center;
+  background: linear-gradient(135deg, #1d4ed8 0%, #6366f1 45%, #9333ea 100%);
   color: #ffffff;
   overflow: hidden;
 }
@@ -107,16 +106,34 @@ a:hover {
   }
 }
 
-.hero-overlay {
+.hero::before {
+  content: '';
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.68);
+  background-image: var(--hero-image);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.35;
+  mix-blend-mode: screen;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.18), transparent 50%),
+    radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.12), transparent 55%),
+    linear-gradient(160deg, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.35) 60%, rgba(15, 23, 42, 0.9) 100%);
 }
 
 .hero .container {
   position: relative;
   z-index: 1;
   padding: 6rem 1rem;
+}
+
+.hero-content {
+  max-width: 720px;
 }
 
 .hero-kicker {
@@ -169,6 +186,35 @@ a:hover {
   font-size: 1.05rem;
 }
 
+.accordion-item {
+  border: none;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+}
+
+.accordion-button {
+  font-weight: 600;
+  padding: 1.05rem 1.5rem;
+  color: var(--pi-dark);
+  border-radius: 1rem;
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.2);
+}
+
+.accordion-button:not(.collapsed) {
+  color: var(--pi-primary);
+  background: rgba(37, 99, 235, 0.08);
+  box-shadow: none;
+}
+
+.accordion-body {
+  color: var(--pi-muted);
+  line-height: 1.7;
+}
+
 .equipment-card {
   background: #ffffff;
   border: none;
@@ -208,7 +254,8 @@ a:hover {
 }
 
 .history-section {
-  background: #f5efe4;
+  background: linear-gradient(130deg, #fdf2f8 0%, #eef2ff 100%);
+  position: relative;
 }
 
 .history-figure {
@@ -222,6 +269,13 @@ a:hover {
   width: 100%;
   height: auto;
   display: block;
+}
+
+.history-figure::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.05), rgba(79, 70, 229, 0.25));
 }
 
 .instructor-photo-wrapper {
@@ -253,66 +307,61 @@ a:hover {
   margin-top: 0.35rem;
 }
 
-.timeline {
+.history-timeline {
   position: relative;
-  margin-left: 1rem;
-  padding-left: 2rem;
+  margin-left: 0.5rem;
+  padding-left: 2.75rem;
 }
 
-.timeline::before {
+.history-timeline::before {
   content: '';
   position: absolute;
-  left: 0.5rem;
+  left: 1rem;
   top: 0.25rem;
   bottom: 0.25rem;
   width: 3px;
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.15), rgba(37, 99, 235, 0.65));
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.3), rgba(124, 58, 237, 0.6));
 }
 
-.timeline-item {
+.history-step {
   position: relative;
-  display: flex;
-  gap: 1.5rem;
-  margin-bottom: 2.5rem;
+  padding-bottom: 2.2rem;
 }
 
-.timeline-item:last-child {
-  margin-bottom: 0;
+.history-step:last-child {
+  padding-bottom: 0;
 }
 
-.timeline-marker {
+.history-marker {
   position: absolute;
-  left: -2.2rem;
-  top: 0.4rem;
-  width: 16px;
-  height: 16px;
-  background: #ffffff;
-  border: 3px solid var(--pi-primary);
+  left: -0.3rem;
+  top: 0.2rem;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.12);
+  border: 4px solid #ffffff;
+  background: linear-gradient(135deg, #2563eb, #9333ea);
+  box-shadow: 0 0 0 8px rgba(79, 70, 229, 0.15);
 }
 
-.timeline-card {
-  background: #ffffff;
-  border-radius: 1rem;
+.history-content {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 1.25rem;
   padding: 1.5rem 1.75rem;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(6px);
 }
 
-.timeline-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.timeline-year {
+.history-year {
+  display: inline-block;
   font-weight: 600;
   color: var(--pi-primary);
   background: rgba(37, 99, 235, 0.12);
   border-radius: 999px;
-  padding: 0.25rem 0.9rem;
+  padding: 0.35rem 1rem;
   font-size: 0.85rem;
+  margin-bottom: 0.75rem;
 }
 
 .plan-card {
@@ -337,6 +386,29 @@ a:hover {
   color: var(--pi-primary);
 }
 
+.trainings-accordion .accordion-item {
+  border: none;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.trainings-accordion .accordion-button {
+  font-weight: 600;
+  gap: 0.75rem;
+  padding: 1.1rem 1.5rem;
+}
+
+.trainings-accordion .accordion-button:not(.collapsed) {
+  color: var(--pi-dark);
+  background: rgba(37, 99, 235, 0.08);
+  box-shadow: none;
+}
+
+.trainings-accordion .accordion-body {
+  padding: 1.1rem 1.5rem 1.5rem;
+  color: var(--pi-muted);
+}
+
 .schedule-table .card {
   border-radius: 1.5rem;
   border: none;
@@ -345,28 +417,6 @@ a:hover {
 
 .schedule-table table {
   font-size: 0.95rem;
-}
-
-.accordion-item {
-  border: none;
-  border-radius: 1rem !important;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
-}
-
-.accordion-button {
-  font-weight: 600;
-  padding: 1.2rem 1.5rem;
-  border-radius: 1rem !important;
-}
-
-.accordion-button:focus {
-  border-color: rgba(37, 99, 235, 0.25);
-  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.15);
-}
-
-.accordion-button:not(.collapsed) {
-  background: rgba(37, 99, 235, 0.08);
-  color: var(--pi-primary);
 }
 
 .contact-card {
@@ -455,13 +505,15 @@ a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  transition: transform 0.3s ease, background 0.3s ease;
+  font-size: 1.35rem;
+  color: #e2e8f0;
+  transition: transform 0.3s ease, background 0.3s ease, color 0.3s ease;
 }
 
 .footer .social-links a:hover {
   transform: translateY(-3px);
   background: var(--pi-primary);
+  color: #ffffff;
 }
 
 .bottom-bar {
@@ -489,13 +541,13 @@ a:hover {
     padding: 5rem 1.5rem;
   }
 
-  .timeline {
+  .history-timeline {
     margin-left: 0;
-    padding-left: 1.5rem;
+    padding-left: 2rem;
   }
 
-  .timeline-marker {
-    left: -1.7rem;
+  .history-marker {
+    left: 0.2rem;
   }
 
   .plan-card {

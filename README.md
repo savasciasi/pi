@@ -10,14 +10,14 @@ Bu depo, Pi Studio Pilates stüdyosu için hazırlanan çok dilli altyapıya haz
 - Google Maps gömme, WhatsApp kısa yolu ve SEO odaklı meta alanları.
 - Tüm görsel yolları kodda referans olarak bulunur ancak depoda herhangi bir görsel dosyası yer almaz.
 
-> Bu depoda resim dosyaları yoktur. assets/img klasörü boş bırakılmıştır. Resimleri siz FTP ile kendiniz yükleyeceksiniz. Admin panelinden yüklenen resimler assets/img/uploads klasörüne kaydedilecektir.
+> Bu repoda görseller yoktur, FTP ile `assets/img/` klasörüne kendiniz yükleyeceksiniz. Admin panelinden yüklenenler `assets/img/uploads/` içine kaydedilir. Yüklenmeyen resimler otomatik olarak placeholder ile gösterilir.
 
 ## Kurulum
 
 1. Tüm projeyi XAMPP veya paylaşımlı hosting ortamınızda `htdocs/pistudio` klasörünün içine kopyalayın.
 2. `pistudio.sql` dosyasını phpMyAdmin üzerinden içe aktararak veritabanı tablolarını ve örnek içerikleri oluşturun.
 3. `config/config.php` dosyasındaki veritabanı bağlantı ayarlarını (sunucu, kullanıcı adı, şifre) ortamınıza göre güncelleyin.
-4. `assets/img/` klasörüne gerekli görselleri manuel olarak yükleyin. **Bu depoda resim dosyaları yoktur. `assets/img` klasörü boş bırakılmıştır. Resimleri siz FTP ile kendiniz yükleyeceksiniz. Admin panelinden yüklenen resimler `assets/img/uploads` klasörüne kaydedilecektir.** Kullanacağınız dosya adları kodda ilgili bileşenler içerisinde referans olarak yer almaktadır.
+4. `assets/img/` klasörüne gerekli görselleri manuel olarak yükleyin. **Bu repoda görseller yoktur, FTP ile `assets/img/` klasörüne kendiniz yükleyeceksiniz. Admin panelinden yüklenenler `assets/img/uploads/` içine kaydedilir. Yüklenmeyen resimler otomatik olarak placeholder ile gösterilir.** Kullanacağınız dosya adları kodda ilgili bileşenler içerisinde referans olarak yer almaktadır.
 5. Admin paneline `https://alanadiniz.com/admin/login.php` adresinden giriş yapın.
    - E-posta: `pinar@pistudiopilates.com`
    - Şifre: `pistudio2025!`

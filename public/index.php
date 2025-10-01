@@ -25,9 +25,35 @@ $whatsappNumber = setting('whatsapp_number', '+90 530 111 22 33');
 $address = $hero['address'] ?? setting('address', 'Bağdat Caddesi No:123, İstanbul');
 $whatsappLink = whatsapp_link($whatsappNumber) ?: 'https://wa.me/905301112233';
 
-$heroBackground = media_url($hero['background_media'] ?? null, 'assets/img/hero-bg.jpg');
-$historyImage = media_url($history['image'] ?? null, 'assets/img/history.jpg');
-$instructorPhoto = media_url($instructor['photo'] ?? null, 'assets/img/pinar.jpg');
+$heroBackground = media_url($hero['background_media'] ?? null, 'assets/img/hero-bg.jpg', 'pilates studio interior');
+$historyImage = media_url($history['image'] ?? null, 'assets/img/history.jpg', 'joseph pilates history');
+$instructorPhoto = media_url($instructor['photo'] ?? null, 'assets/img/pinar.jpg', 'pilates instructor portrait');
+
+$historyEvents = [];
+$rawHistory = trim((string)($history['content'] ?? ''));
+if ($rawHistory !== '') {
+    foreach (preg_split('/\r\n|\r|\n/', $rawHistory) as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            continue;
+        }
+        if (strpos($line, '|') !== false) {
+            [$year, $text] = array_map('trim', explode('|', $line, 2));
+        } else {
+            $year = '';
+            $text = $line;
+        }
+        $historyEvents[] = ['year' => $year, 'text' => $text];
+    }
+}
+
+if (empty($historyEvents)) {
+    $historyEvents = [
+        ['year' => "1920'ler", 'text' => 'Joseph Pilates kontorloji yaklaşımını geliştirerek modern pilatesin temelini attı.'],
+        ['year' => "1990'lar", 'text' => 'Pilates metodu fizik tedavi ve hareket alanlarında popülerleşerek dünya çapında yayıldı.'],
+        ['year' => 'Günümüz', 'text' => 'Pi Studio Pilates, kontroloji prensiplerini bilimsel yaklaşım ve kişiye özel programlarla buluşturuyor.'],
+    ];
+}
 
 function dayLabel(int $dayOrder): string
 {
@@ -37,7 +63,9 @@ function dayLabel(int $dayOrder): string
 
 function equipmentImage(array $equipment): string
 {
-    return media_url($equipment['img'] ?? null, 'assets/img/placeholder.jpg');
+    $title = trim($equipment['title'] ?? '');
+    $topic = $title !== '' ? 'pilates equipment ' . $title : 'pilates equipment';
+    return media_url($equipment['img'] ?? null, null, $topic);
 }
 ?>
 <!DOCTYPE html>
@@ -49,11 +77,12 @@ function equipmentImage(array $equipment): string
     <meta name="description" content="<?= htmlspecialchars($tagline); ?>">
     <meta property="og:title" content="<?= htmlspecialchars($hero['title'] ?? $siteName); ?>">
     <meta property="og:description" content="<?= htmlspecialchars($tagline); ?>">
-    <meta property="og:image" content="<?= htmlspecialchars(media_url($hero['background_media'] ?? null)); ?>">
+    <meta property="og:image" content="<?= htmlspecialchars(media_url($hero['background_media'] ?? null, 'assets/img/hero-bg.jpg', 'pilates studio interior')); ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<?= ASSET_URL ?>css/style.css">
 </head>
 <body id="top">
@@ -84,14 +113,15 @@ function equipmentImage(array $equipment): string
 </nav>
 
 <header class="hero" style="--hero-image: url('<?= htmlspecialchars($heroBackground); ?>');">
-    <div class="hero-overlay"></div>
-    <div class="container position-relative text-center text-white">
-        <span class="hero-kicker">Pi Studio Pilates</span>
-        <h1 class="display-4 fw-bold mb-3"><?= htmlspecialchars($hero['title'] ?? $siteName); ?></h1>
-        <p class="lead mx-auto mb-4 col-lg-7"><?= nl2br(htmlspecialchars($tagline)); ?></p>
-        <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
-            <a class="btn btn-primary btn-lg px-4" href="<?= htmlspecialchars($hero['cta_primary_link'] ?? '#contact'); ?>"><?= htmlspecialchars($hero['cta_primary_text'] ?? 'Deneme Dersi Al'); ?></a>
-            <a class="btn btn-outline-light btn-lg px-4" href="<?= htmlspecialchars($hero['cta_secondary_link'] ?? '#schedule'); ?>"><?= htmlspecialchars($hero['cta_secondary_text'] ?? 'Ders Programı'); ?></a>
+    <div class="container text-center text-white">
+        <div class="hero-content mx-auto">
+            <span class="hero-kicker">Pi Studio Pilates</span>
+            <h1 class="display-4 fw-bold mb-3"><?= htmlspecialchars($hero['title'] ?? $siteName); ?></h1>
+            <p class="lead mx-auto mb-4 col-lg-7"><?= nl2br(htmlspecialchars($tagline)); ?></p>
+            <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
+                <a class="btn btn-primary btn-lg px-4" href="<?= htmlspecialchars($hero['cta_primary_link'] ?? '#contact'); ?>"><?= htmlspecialchars($hero['cta_primary_text'] ?? 'Deneme Dersi Al'); ?></a>
+                <a class="btn btn-outline-light btn-lg px-4" href="<?= htmlspecialchars($hero['cta_secondary_link'] ?? '#schedule'); ?>"><?= htmlspecialchars($hero['cta_secondary_text'] ?? 'Ders Programı'); ?></a>
+            </div>
         </div>
     </div>
 </header>
@@ -143,7 +173,7 @@ function equipmentImage(array $equipment): string
 
     <section id="history" class="section-spacer history-section">
         <div class="container">
-            <div class="row g-5 align-items-center">
+            <div class="row g-5 align-items-start">
                 <div class="col-lg-5">
                     <div class="history-figure">
                         <img src="<?= htmlspecialchars($historyImage); ?>" alt="Joseph Pilates">
@@ -151,8 +181,20 @@ function equipmentImage(array $equipment): string
                 </div>
                 <div class="col-lg-7">
                     <p class="section-title">Kısaca Tarihçe</p>
-                    <h2 class="section-heading mb-3">Joseph Pilates&#39;in Kontroloji Mirası</h2>
-                    <p class="section-lead"><?= nl2br(htmlspecialchars($history['content'] ?? '20. yüzyılın başında Joseph Pilates tarafından geliştirilen kontroloji, modern pilates pratiğinin temelini oluşturur. Pi Studio Pilates bu mirası günümüz bilimiyle buluşturur.')); ?></p>
+                    <h2 class="section-heading mb-4">Kontrolojiden Modern Pilates&#39;e</h2>
+                    <div class="history-timeline">
+                        <?php foreach ($historyEvents as $event): ?>
+                            <article class="history-step">
+                                <div class="history-marker"></div>
+                                <div class="history-content">
+                                    <?php if (!empty($event['year'])): ?>
+                                        <span class="history-year"><?= htmlspecialchars($event['year']); ?></span>
+                                    <?php endif; ?>
+                                    <p class="mb-0"><?= nl2br(htmlspecialchars($event['text'])); ?></p>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -161,12 +203,7 @@ function equipmentImage(array $equipment): string
     <section id="instructor" class="section-spacer bg-light">
         <div class="container">
             <div class="row g-5 align-items-center">
-                <div class="col-lg-5">
-                    <div class="instructor-photo-wrapper">
-                        <img src="<?= htmlspecialchars($instructorPhoto); ?>" class="instructor-photo" alt="Pınar Sarı Koçak">
-                    </div>
-                </div>
-                <div class="col-lg-7">
+                <div class="col-lg-7 order-lg-1 order-2">
                     <p class="section-title">Eğitmen</p>
                     <h2 class="section-heading mb-3">Pınar Sarı Koçak Kimdir?</h2>
                     <p class="section-lead mb-4"><?= nl2br(htmlspecialchars($instructor['bio'] ?? 'Pınar Sarı Koçak, hareket anatomi bilgisi ve kişiye özel pilates yaklaşımıyla bedeninizi yeniden keşfetmenizi sağlar.')); ?></p>
@@ -185,6 +222,11 @@ function equipmentImage(array $equipment): string
                         </ul>
                     <?php endif; ?>
                 </div>
+                <div class="col-lg-5 order-lg-2 order-1">
+                    <div class="instructor-photo-wrapper">
+                        <img src="<?= htmlspecialchars($instructorPhoto); ?>" class="instructor-photo" alt="Pınar Sarı Koçak">
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -198,18 +240,20 @@ function equipmentImage(array $equipment): string
                     <p class="section-lead">Pınar Sarı Koçak&#39;ın tamamladığı ve devam eden eğitimler, öğrencilerimizin güvenli ve etkili bir deneyim yaşamasını sağlar.</p>
                 </div>
             </div>
-            <div class="timeline">
-                <?php foreach ($trainings as $training): ?>
-                    <div class="timeline-item">
-                        <div class="timeline-marker"></div>
-                        <div class="timeline-card">
-                            <div class="timeline-header">
-                                <?php if (!empty($training['year'])): ?>
-                                    <span class="timeline-year"><?= htmlspecialchars($training['year']); ?></span>
-                                <?php endif; ?>
-                                <h3 class="h5 mb-1"><?= htmlspecialchars($training['title']); ?></h3>
+            <div class="accordion trainings-accordion" id="trainingsAccordion">
+                <?php foreach ($trainings as $index => $training): ?>
+                    <?php $collapseId = 'training-' . (int)$training['id']; ?>
+                    <div class="accordion-item mb-3 shadow-sm">
+                        <h3 class="accordion-header" id="heading-<?= $collapseId; ?>">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<?= $collapseId; ?>" aria-expanded="false" aria-controls="collapse-<?= $collapseId; ?>">
+                                <span class="me-3 badge rounded-pill bg-primary-subtle text-primary fw-semibold"><?= htmlspecialchars($training['year'] ?: 'Devam'); ?></span>
+                                <span><?= htmlspecialchars($training['title']); ?></span>
+                            </button>
+                        </h3>
+                        <div id="collapse-<?= $collapseId; ?>" class="accordion-collapse collapse" aria-labelledby="heading-<?= $collapseId; ?>" data-bs-parent="#trainingsAccordion">
+                            <div class="accordion-body">
+                                <?= nl2br(htmlspecialchars($training['description'])); ?>
                             </div>
-                            <p class="mb-0"><?= nl2br(htmlspecialchars($training['description'])); ?></p>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -280,7 +324,7 @@ function equipmentImage(array $equipment): string
             <div class="accordion" id="faqAccordion">
                 <?php foreach ($faq as $index => $item): ?>
                     <?php $collapseId = 'faq-' . (int)$item['id']; ?>
-                    <div class="accordion-item mb-3">
+                    <div class="accordion-item mb-3 shadow-sm">
                         <h3 class="accordion-header" id="heading-<?= $collapseId; ?>">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<?= $collapseId; ?>" aria-expanded="false" aria-controls="collapse-<?= $collapseId; ?>">
                                 <?= htmlspecialchars($item['question']); ?>
@@ -393,8 +437,12 @@ function equipmentImage(array $equipment): string
             <div class="col-lg-4 col-md-6">
                 <h5>Bağlantılar</h5>
                 <div class="d-flex align-items-center gap-3 mb-3 social-links">
-                    <a href="<?= htmlspecialchars($instagramUrl); ?>" aria-label="Instagram" target="_blank" rel="noopener">IG</a>
-                    <a href="<?= htmlspecialchars($whatsappLink); ?>" aria-label="WhatsApp" target="_blank" rel="noopener">WA</a>
+                    <a href="<?= htmlspecialchars($instagramUrl); ?>" aria-label="Instagram" target="_blank" rel="noopener">
+                        <i class="bi bi-instagram"></i>
+                    </a>
+                    <a href="<?= htmlspecialchars($whatsappLink); ?>" aria-label="WhatsApp" target="_blank" rel="noopener">
+                        <i class="bi bi-whatsapp"></i>
+                    </a>
                 </div>
                 <ul class="list-unstyled d-grid gap-2">
                     <?php foreach ($footerLinks as $link): ?>

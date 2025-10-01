@@ -14,7 +14,7 @@ define('ASSET_URL', BASE_URL . 'assets/');
 define('PUBLIC_PATH', dirname(__DIR__) . '/public/');
 define('UPLOAD_DIR', dirname(__DIR__) . '/assets/img/uploads/');
 define('UPLOAD_URL', ASSET_URL . 'img/uploads/');
-define('PLACEHOLDER_IMG', 'assets/img/placeholder.jpg');
+define('PLACEHOLDER_IMG', 'https://source.unsplash.com/featured/?pilates');
 
 if (!is_dir(UPLOAD_DIR)) {
     mkdir(UPLOAD_DIR, 0755, true);
