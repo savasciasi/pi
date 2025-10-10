@@ -1,0 +1,10 @@
+# Pi Studio Pilates - Robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /config/
+Disallow: /storage/
+Disallow: /*.sql$
+
+Sitemap: https://pistudiopilates.com/sitemap.xml

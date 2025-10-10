@@ -1,487 +1,310 @@
 <?php
 require_once __DIR__ . '/../config/config.php';
 
-$settings = get_settings();
-$hero = fetchOne('SELECT * FROM hero LIMIT 1');
-$pilates = fetchOne('SELECT * FROM about_pilates LIMIT 1');
-$history = fetchOne('SELECT * FROM history LIMIT 1');
-$instructor = fetchOne('SELECT * FROM instructor LIMIT 1');
-$trainings = fetchAll('SELECT * FROM trainings ORDER BY sort_order, id');
-$equipments = fetchAll('SELECT * FROM equipments ORDER BY sort_order, id');
-$plans = fetchAll('SELECT * FROM plans ORDER BY sort_order, id');
-$schedule = fetchAll('SELECT * FROM schedule_entries ORDER BY day_order, start_time');
-$faq = fetchAll('SELECT * FROM faq ORDER BY sort_order, id');
-$footerLinks = fetchAll('SELECT * FROM footer_links ORDER BY position ASC');
+$requestUri = $_SERVER['REQUEST_URI'];
+$requestUri = strtok($requestUri, '?');
+$requestUri = rtrim($requestUri, '/');
 
-$siteName = setting('site_name', 'Pi Studio Pilates');
-$siteLanguage = setting('language', 'tr');
-$logoPath = setting('logo');
-$logoUrl = $logoPath ? media_url($logoPath) : null;
-$tagline = $hero['subtitle'] ?? 'Vücudunu güçlendir, nefesinle ak.';
-$contactEmail = setting('contact_email', 'info@pistudiopilates.com');
-$contactPhone = setting('contact_phone', '+90 530 111 22 33');
-$instagramUrl = setting('instagram_url', 'https://www.instagram.com');
-$whatsappNumber = setting('whatsapp_number', '+90 530 111 22 33');
-$address = $hero['address'] ?? setting('address', 'Bağdat Caddesi No:123, İstanbul');
-$whatsappLink = whatsapp_link($whatsappNumber) ?: 'https://wa.me/905301112233';
-
-$heroBackground = media_url($hero['background_media'] ?? null, 'assets/img/hero-bg.jpg', 'pilates studio interior');
-$historyImage = media_url($history['image'] ?? null, 'assets/img/history.jpg', 'joseph pilates history');
-$instructorPhoto = media_url($instructor['photo'] ?? null, 'assets/img/pinar.jpg', 'pilates instructor portrait');
-
-$historyEvents = [];
-$rawHistory = trim((string)($history['content'] ?? ''));
-if ($rawHistory !== '') {
-    foreach (preg_split('/\r\n|\r|\n/', $rawHistory) as $line) {
-        $line = trim($line);
-        if ($line === '') {
-            continue;
-        }
-        if (strpos($line, '|') !== false) {
-            [$year, $text] = array_map('trim', explode('|', $line, 2));
-        } else {
-            $year = '';
-            $text = $line;
-        }
-        $historyEvents[] = ['year' => $year, 'text' => $text];
-    }
+if (empty($requestUri)) {
+    $requestUri = '/';
 }
 
-if (empty($historyEvents)) {
-    $historyEvents = [
-        ['year' => "1920'ler", 'text' => 'Joseph Pilates kontorloji yaklaşımını geliştirerek modern pilatesin temelini attı.'],
-        ['year' => "1990'lar", 'text' => 'Pilates metodu fizik tedavi ve hareket alanlarında popülerleşerek dünya çapında yayıldı.'],
-        ['year' => 'Günümüz', 'text' => 'Pi Studio Pilates, kontroloji prensiplerini bilimsel yaklaşım ve kişiye özel programlarla buluşturuyor.'],
+$lang = getCurrentLang();
+$slug = 'home';
+
+if (preg_match('#^/(tr|en)(/(.+))?$#', $requestUri, $matches)) {
+    $lang = $matches[1];
+    setCurrentLang($lang);
+    $slug = $matches[3] ?? 'home';
+} elseif (preg_match('#^/(.+)$#', $requestUri, $matches)) {
+    $slug = $matches[1];
+}
+
+$page = getPage($slug, $lang);
+
+if (!$page) {
+    http_response_code(404);
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>404</title></head><body><h1>404 - Page Not Found</h1></body></html>';
+    exit;
+}
+
+$siteName = getSetting('site_name', 'Pi Studio Pilates');
+$whatsappNumber = getSetting('whatsapp_number', '+05417672104');
+$whatsappMessage = getSetting('whatsapp_message', 'Merhaba, randevu almak istiyorum.');
+$instagramStudio = getSetting('instagram_studio', 'https://www.instagram.com/pi_studyo_pilatess');
+$instagramInstructor = getSetting('instagram_instructor', 'https://www.instagram.com/uverrcinnkaa');
+$contactEmail = getSetting('contact_email', 'info@pistudiopilates.com');
+$address = getSetting('address', 'Ankara, Türkiye');
+$workingHours = getSetting('working_hours', 'Pazartesi - Cumartesi: 09:00 - 20:00<br>Pazar: Kapalı');
+$videoPlaylist = json_decode(getSetting('video_playlist', '[]'), true);
+if (!is_array($videoPlaylist)) {
+    $videoPlaylist = ['assets/video/bg.mp4', 'assets/video/bg1.mp4', 'assets/video/bg2.mp4', 'assets/video/bg3.mp4'];
+}
+
+$whatsappLink = 'https://wa.me/' . preg_replace('/[^0-9]/', '', $whatsappNumber) . '?text=' . urlencode($whatsappMessage);
+
+$navItems = [];
+if ($lang === 'tr') {
+    $navItems = [
+        ['label' => 'Anasayfa', 'slug' => 'home'],
+        ['label' => 'Eğitmen', 'slug' => 'egitmen'],
+        ['label' => 'İletişim', 'slug' => 'contact']
+    ];
+} else {
+    $navItems = [
+        ['label' => 'Home', 'slug' => 'home'],
+        ['label' => 'Instructor', 'slug' => 'instructor'],
+        ['label' => 'Contact', 'slug' => 'contact']
     ];
 }
 
-function dayLabel(int $dayOrder): string
-{
-    $days = [1 => 'Pazartesi', 2 => 'Salı', 3 => 'Çarşamba', 4 => 'Perşembe', 5 => 'Cuma', 6 => 'Cumartesi', 7 => 'Pazar'];
-    return $days[$dayOrder] ?? '';
+$otherLang = $lang === 'tr' ? 'en' : 'tr';
+$otherLangSlug = $slug;
+if ($slug === 'egitmen' && $lang === 'tr') {
+    $otherLangSlug = 'instructor';
+} elseif ($slug === 'instructor' && $lang === 'en') {
+    $otherLangSlug = 'egitmen';
 }
+$langSwitchUrl = '/' . $otherLang . '/' . $otherLangSlug;
 
-function equipmentImage(array $equipment): string
-{
-    $title = trim($equipment['title'] ?? '');
-    $topic = $title !== '' ? 'pilates equipment ' . $title : 'pilates equipment';
-    return media_url($equipment['img'] ?? null, null, $topic);
-}
+$csrfToken = generateCsrfToken();
 ?>
 <!DOCTYPE html>
-<html lang="<?= htmlspecialchars($siteLanguage); ?>">
+<html lang="<?php echo escape($lang); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($hero['title'] ?? $siteName); ?></title>
-    <meta name="description" content="<?= htmlspecialchars($tagline); ?>">
-    <meta property="og:title" content="<?= htmlspecialchars($hero['title'] ?? $siteName); ?>">
-    <meta property="og:description" content="<?= htmlspecialchars($tagline); ?>">
-    <meta property="og:image" content="<?= htmlspecialchars(media_url($hero['background_media'] ?? null, 'assets/img/hero-bg.jpg', 'pilates studio interior')); ?>">
+    <title><?php echo escape($page['meta_title'] ?: $page['title']); ?></title>
+    <meta name="description" content="<?php echo escape($page['meta_description'] ?: ''); ?>">
+
+    <meta property="og:title" content="<?php echo escape($page['meta_title'] ?: $page['title']); ?>">
+    <meta property="og:description" content="<?php echo escape($page['meta_description'] ?: ''); ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?php echo escape(APP_URL . '/' . $lang . '/' . $slug); ?>">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?php echo escape($page['meta_title'] ?: $page['title']); ?>">
+    <meta name="twitter:description" content="<?php echo escape($page['meta_description'] ?: ''); ?>">
+
+    <link rel="alternate" hreflang="tr" href="<?php echo escape(APP_URL . '/tr/' . ($slug === 'instructor' ? 'egitmen' : $slug)); ?>">
+    <link rel="alternate" hreflang="en" href="<?php echo escape(APP_URL . '/en/' . ($slug === 'egitmen' ? 'instructor' : $slug)); ?>">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="<?= ASSET_URL ?>css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
 </head>
-<body id="top">
-<nav class="navbar navbar-expand-lg fixed-top navbar-light">
-    <div class="container">
-        <a class="navbar-brand d-flex align-items-center gap-2" href="#top">
-            <?php if ($logoUrl): ?>
-                <img src="<?= htmlspecialchars($logoUrl); ?>" alt="<?= htmlspecialchars($siteName); ?>">
-            <?php endif; ?>
-            <span><?= htmlspecialchars($siteName); ?></span>
+<body>
+
+<nav class="navbar">
+    <div class="container navbar-container">
+        <a href="/<?php echo $lang; ?>/home" class="navbar-brand">
+            <?php echo escape($siteName); ?>
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#primaryNav" aria-controls="primaryNav" aria-expanded="false" aria-label="Menüyü Aç">
-            <span class="navbar-toggler-icon"></span>
+
+        <button class="navbar-toggler" id="navToggle" aria-label="Toggle navigation">
+            <span></span>
+            <span></span>
+            <span></span>
         </button>
-        <div class="collapse navbar-collapse" id="primaryNav">
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="#about">Pilates Nedir?</a></li>
-                <li class="nav-item"><a class="nav-link" href="#equipments">Ekipmanlar</a></li>
-                <li class="nav-item"><a class="nav-link" href="#history">Tarihçe</a></li>
-                <li class="nav-item"><a class="nav-link" href="#instructor">Pınar Sarı Koçak</a></li>
-                <li class="nav-item"><a class="nav-link" href="#trainings">Eğitimler</a></li>
-                <li class="nav-item"><a class="nav-link" href="#plans">Dersler & Üyelik</a></li>
-                <li class="nav-item"><a class="nav-link" href="#faq">S.S.S.</a></li>
-                <li class="nav-item"><a class="nav-link" href="#contact">İletişim</a></li>
+
+        <div class="navbar-menu" id="navMenu">
+            <ul class="navbar-nav">
+                <?php foreach ($navItems as $item): ?>
+                <li class="nav-item">
+                    <a href="/<?php echo $lang; ?>/<?php echo $item['slug']; ?>" class="nav-link<?php echo $slug === $item['slug'] ? ' active' : ''; ?>">
+                        <?php echo escape($item['label']); ?>
+                    </a>
+                </li>
+                <?php endforeach; ?>
             </ul>
+
+            <div class="navbar-actions">
+                <a href="<?php echo escape($langSwitchUrl); ?>" class="lang-switch">
+                    <?php echo $lang === 'tr' ? 'EN' : 'TR'; ?>
+                </a>
+            </div>
         </div>
     </div>
 </nav>
 
-<header class="hero" style="--hero-image: url('<?= htmlspecialchars($heroBackground); ?>');">
-    <div class="container text-center text-white">
-        <div class="hero-content mx-auto">
-            <span class="hero-kicker">Pi Studio Pilates</span>
-            <h1 class="display-4 fw-bold mb-3"><?= htmlspecialchars($hero['title'] ?? $siteName); ?></h1>
-            <p class="lead mx-auto mb-4 col-lg-7"><?= nl2br(htmlspecialchars($tagline)); ?></p>
-            <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
-                <a class="btn btn-primary btn-lg px-4" href="<?= htmlspecialchars($hero['cta_primary_link'] ?? '#contact'); ?>"><?= htmlspecialchars($hero['cta_primary_text'] ?? 'Deneme Dersi Al'); ?></a>
-                <a class="btn btn-outline-light btn-lg px-4" href="<?= htmlspecialchars($hero['cta_secondary_link'] ?? '#schedule'); ?>"><?= htmlspecialchars($hero['cta_secondary_text'] ?? 'Ders Programı'); ?></a>
+<?php if ($slug === 'home'): ?>
+<section class="hero-section">
+    <div class="video-background">
+        <video id="heroVideo" autoplay muted playsinline></video>
+    </div>
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+        <?php echo $page['content']; ?>
+        <div class="hero-buttons">
+            <a href="<?php echo escape($whatsappLink); ?>" class="btn btn-primary" target="_blank" rel="noopener">
+                <?php echo $lang === 'tr' ? 'Randevu Al' : 'Book Appointment'; ?>
+            </a>
+            <a href="/<?php echo $lang; ?>/<?php echo $lang === 'tr' ? 'egitmen' : 'instructor'; ?>" class="btn btn-secondary">
+                <?php echo $lang === 'tr' ? 'Eğitmen' : 'Instructor'; ?>
+            </a>
+        </div>
+    </div>
+</section>
+<?php elseif ($slug === 'egitmen' || $slug === 'instructor'): ?>
+<section class="page-section instructor-page">
+    <div class="container">
+        <div class="instructor-content">
+            <?php echo $page['content']; ?>
+        </div>
+        <div class="social-links">
+            <a href="<?php echo escape($instagramInstructor); ?>" target="_blank" rel="noopener" class="social-link">
+                Instagram
+            </a>
+        </div>
+    </div>
+</section>
+<?php elseif ($slug === 'contact'): ?>
+<section class="page-section contact-page">
+    <div class="container">
+        <div class="contact-grid">
+            <div class="contact-form-wrapper">
+                <?php echo $page['content']; ?>
+
+                <?php if (isset($_SESSION['contact_success'])): ?>
+                    <div class="alert alert-success">
+                        <?php echo escape($_SESSION['contact_success']); ?>
+                        <?php unset($_SESSION['contact_success']); ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (isset($_SESSION['contact_error'])): ?>
+                    <div class="alert alert-error">
+                        <?php echo escape($_SESSION['contact_error']); ?>
+                        <?php unset($_SESSION['contact_error']); ?>
+                    </div>
+                <?php endif; ?>
+
+                <form method="post" action="/public/process_contact.php" class="contact-form">
+                    <input type="hidden" name="csrf_token" value="<?php echo $csrfToken; ?>">
+                    <input type="hidden" name="lang" value="<?php echo $lang; ?>">
+
+                    <div class="form-group">
+                        <label for="name"><?php echo $lang === 'tr' ? 'Ad Soyad' : 'Full Name'; ?></label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email"><?php echo $lang === 'tr' ? 'E-posta' : 'Email'; ?></label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone"><?php echo $lang === 'tr' ? 'Telefon' : 'Phone'; ?></label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message"><?php echo $lang === 'tr' ? 'Mesaj' : 'Message'; ?></label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <?php echo $lang === 'tr' ? 'Gönder' : 'Send'; ?>
+                    </button>
+                </form>
+            </div>
+
+            <div class="contact-info">
+                <h3><?php echo $lang === 'tr' ? 'İletişim Bilgileri' : 'Contact Information'; ?></h3>
+
+                <div class="contact-item">
+                    <strong><?php echo $lang === 'tr' ? 'WhatsApp' : 'WhatsApp'; ?>:</strong>
+                    <a href="<?php echo escape($whatsappLink); ?>" target="_blank" rel="noopener">
+                        <?php echo escape($whatsappNumber); ?>
+                    </a>
+                </div>
+
+                <div class="contact-item">
+                    <strong><?php echo $lang === 'tr' ? 'E-posta' : 'Email'; ?>:</strong>
+                    <a href="mailto:<?php echo escape($contactEmail); ?>">
+                        <?php echo escape($contactEmail); ?>
+                    </a>
+                </div>
+
+                <div class="contact-item">
+                    <strong><?php echo $lang === 'tr' ? 'Adres' : 'Address'; ?>:</strong>
+                    <p><?php echo escape($address); ?></p>
+                </div>
+
+                <div class="contact-item">
+                    <strong><?php echo $lang === 'tr' ? 'Çalışma Saatleri' : 'Working Hours'; ?>:</strong>
+                    <p><?php echo $workingHours; ?></p>
+                </div>
+
+                <div class="social-links">
+                    <a href="<?php echo escape($instagramStudio); ?>" target="_blank" rel="noopener" class="social-link">
+                        Instagram (Studio)
+                    </a>
+                    <a href="<?php echo escape($instagramInstructor); ?>" target="_blank" rel="noopener" class="social-link">
+                        Instagram (<?php echo $lang === 'tr' ? 'Eğitmen' : 'Instructor'; ?>)
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-</header>
-
-<main>
-    <section id="about" class="section-spacer bg-white">
-        <div class="container">
-            <div class="row justify-content-center text-center">
-                <div class="col-lg-10">
-                    <p class="section-title">Pilates Nedir?</p>
-                    <h2 class="section-heading mb-3">Nefes, Kontrol ve Core Gücü</h2>
-                    <p class="section-lead"><?= nl2br(htmlspecialchars($pilates['content'] ?? 'Pilates; nefes, kontrol ve core gücünü temel alan kapsamlı bir zihin-beden pratiğidir. Doğru nefes ve hizalanma ile bedeninizi yeniden keşfedin.')); ?></p>
-                </div>
-            </div>
+</section>
+<?php else: ?>
+<section class="page-section">
+    <div class="container">
+        <div class="page-content">
+            <?php echo $page['content']; ?>
         </div>
-    </section>
-
-    <section id="equipments" class="section-spacer bg-light">
-        <div class="container">
-            <div class="row align-items-center mb-4">
-                <div class="col-lg-7">
-                    <p class="section-title">Ekipmanlar</p>
-                    <h2 class="section-heading mb-3">Stüdyomuzdaki Profesyonel Pilates Ekipmanları</h2>
-                </div>
-                <div class="col-lg-5 text-lg-end text-muted">
-                    <p class="section-lead mb-0">Her öğrencimiz için özel tasarlanan programlarla Mat, Reformer, Tower, Cadillac, Chair ve Barrel ekipmanları kullanıyoruz.</p>
-                </div>
-            </div>
-            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-                <?php foreach ($equipments as $equipment): ?>
-                    <div class="col">
-                        <article class="equipment-card h-100">
-                            <div class="equipment-thumb">
-                                <img src="<?= htmlspecialchars(equipmentImage($equipment)); ?>" alt="<?= htmlspecialchars($equipment['title']); ?>">
-                            </div>
-                            <div class="card-body d-flex flex-column">
-                                <h3 class="h5 mb-2"><?= htmlspecialchars($equipment['title']); ?></h3>
-                                <p class="flex-grow-1 mb-3"><?= nl2br(htmlspecialchars($equipment['description'])); ?></p>
-                                <?php if (!empty($equipment['more_info'])): ?>
-                                    <button class="btn btn-outline-primary mt-auto" data-bs-toggle="modal" data-bs-target="#equipmentModal<?= (int)$equipment['id']; ?>">Daha Fazla</button>
-                                <?php endif; ?>
-                            </div>
-                        </article>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </section>
-
-    <section id="history" class="section-spacer history-section">
-        <div class="container">
-            <div class="row g-5 align-items-start">
-                <div class="col-lg-5">
-                    <div class="history-figure">
-                        <img src="<?= htmlspecialchars($historyImage); ?>" alt="Joseph Pilates">
-                    </div>
-                </div>
-                <div class="col-lg-7">
-                    <p class="section-title">Kısaca Tarihçe</p>
-                    <h2 class="section-heading mb-4">Kontrolojiden Modern Pilates&#39;e</h2>
-                    <div class="history-timeline">
-                        <?php foreach ($historyEvents as $event): ?>
-                            <article class="history-step">
-                                <div class="history-marker"></div>
-                                <div class="history-content">
-                                    <?php if (!empty($event['year'])): ?>
-                                        <span class="history-year"><?= htmlspecialchars($event['year']); ?></span>
-                                    <?php endif; ?>
-                                    <p class="mb-0"><?= nl2br(htmlspecialchars($event['text'])); ?></p>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="instructor" class="section-spacer bg-light">
-        <div class="container">
-            <div class="row g-5 align-items-center">
-                <div class="col-lg-7 order-lg-1 order-2">
-                    <p class="section-title">Eğitmen</p>
-                    <h2 class="section-heading mb-3">Pınar Sarı Koçak Kimdir?</h2>
-                    <p class="section-lead mb-4"><?= nl2br(htmlspecialchars($instructor['bio'] ?? 'Pınar Sarı Koçak, hareket anatomi bilgisi ve kişiye özel pilates yaklaşımıyla bedeninizi yeniden keşfetmenizi sağlar.')); ?></p>
-                    <?php if (!empty($instructor['highlights'])): ?>
-                        <ul class="instructor-highlights list-unstyled row row-cols-1 row-cols-sm-2 g-3 mb-0">
-                            <?php foreach (explode("\n", $instructor['highlights']) as $highlight): ?>
-                                <?php $trimmed = trim($highlight); ?>
-                                <?php if ($trimmed === '') { continue; } ?>
-                                <li class="col">
-                                    <div class="instructor-highlight d-flex align-items-start gap-2">
-                                        <span class="instructor-highlight-icon" aria-hidden="true">&#9679;</span>
-                                        <span><?= htmlspecialchars($trimmed); ?></span>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-                </div>
-                <div class="col-lg-5 order-lg-2 order-1">
-                    <div class="instructor-photo-wrapper">
-                        <img src="<?= htmlspecialchars($instructorPhoto); ?>" class="instructor-photo" alt="Pınar Sarı Koçak">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="trainings" class="section-spacer bg-white">
-        <div class="container">
-            <div class="row justify-content-center text-center mb-5">
-                <div class="col-lg-8">
-                    <p class="section-title">Eğitimler</p>
-                    <h2 class="section-heading mb-3">Sertifikalar ve Uzmanlıklar</h2>
-                    <p class="section-lead">Pınar Sarı Koçak&#39;ın tamamladığı ve devam eden eğitimler, öğrencilerimizin güvenli ve etkili bir deneyim yaşamasını sağlar.</p>
-                </div>
-            </div>
-            <div class="accordion trainings-accordion" id="trainingsAccordion">
-                <?php foreach ($trainings as $index => $training): ?>
-                    <?php $collapseId = 'training-' . (int)$training['id']; ?>
-                    <div class="accordion-item mb-3 shadow-sm">
-                        <h3 class="accordion-header" id="heading-<?= $collapseId; ?>">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<?= $collapseId; ?>" aria-expanded="false" aria-controls="collapse-<?= $collapseId; ?>">
-                                <span class="me-3 badge rounded-pill bg-primary-subtle text-primary fw-semibold"><?= htmlspecialchars($training['year'] ?: 'Devam'); ?></span>
-                                <span><?= htmlspecialchars($training['title']); ?></span>
-                            </button>
-                        </h3>
-                        <div id="collapse-<?= $collapseId; ?>" class="accordion-collapse collapse" aria-labelledby="heading-<?= $collapseId; ?>" data-bs-parent="#trainingsAccordion">
-                            <div class="accordion-body">
-                                <?= nl2br(htmlspecialchars($training['description'])); ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </section>
-
-    <section id="plans" class="section-spacer bg-light">
-        <div class="container">
-            <div class="row justify-content-center text-center mb-5">
-                <div class="col-lg-8">
-                    <p class="section-title">Dersler &amp; Üyelik</p>
-                    <h2 class="section-heading mb-3">Size Uygun Pilates Paketi</h2>
-                    <p class="section-lead">Deneme dersinden kişiye özel programlara kadar esnek paket seçenekleri ile hedeflerinize odaklanın.</p>
-                </div>
-            </div>
-            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4">
-                <?php foreach ($plans as $plan): ?>
-                    <div class="col">
-                        <div class="plan-card h-100">
-                            <h3 class="h5 mb-2"><?= htmlspecialchars($plan['title']); ?></h3>
-                            <p class="price mb-3"><?= htmlspecialchars($plan['price']); ?></p>
-                            <p class="flex-grow-1 mb-4"><?= nl2br(htmlspecialchars($plan['description'])); ?></p>
-                            <a class="btn btn-outline-primary w-100" href="#contact">Bilgi Al</a>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            <div id="schedule" class="schedule-table mt-5">
-                <div class="card p-4">
-                    <h3 class="h4 mb-4 text-center">Haftalık Ders Programı</h3>
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Gün</th>
-                                    <th scope="col">Saat</th>
-                                    <th scope="col">Ders</th>
-                                    <th scope="col">Seviye</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($schedule as $entry): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars(dayLabel((int)$entry['day_order'])); ?></td>
-                                        <td><?= htmlspecialchars(format_time($entry['start_time'])); ?></td>
-                                        <td><?= htmlspecialchars($entry['class_type']); ?></td>
-                                        <td><?= htmlspecialchars($entry['level']); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="faq" class="section-spacer bg-white">
-        <div class="container">
-            <div class="row justify-content-center text-center mb-5">
-                <div class="col-lg-8">
-                    <p class="section-title">S.S.S.</p>
-                    <h2 class="section-heading mb-3">Sık Sorulan Sorular</h2>
-                    <p class="section-lead">Ders öncesi aklınıza takılan konular için hızlı cevaplar.</p>
-                </div>
-            </div>
-            <div class="accordion" id="faqAccordion">
-                <?php foreach ($faq as $index => $item): ?>
-                    <?php $collapseId = 'faq-' . (int)$item['id']; ?>
-                    <div class="accordion-item mb-3 shadow-sm">
-                        <h3 class="accordion-header" id="heading-<?= $collapseId; ?>">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<?= $collapseId; ?>" aria-expanded="false" aria-controls="collapse-<?= $collapseId; ?>">
-                                <?= htmlspecialchars($item['question']); ?>
-                            </button>
-                        </h3>
-                        <div id="collapse-<?= $collapseId; ?>" class="accordion-collapse collapse" aria-labelledby="heading-<?= $collapseId; ?>" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body">
-                                <?= nl2br(htmlspecialchars($item['answer'])); ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </section>
-
-    <section id="contact" class="section-spacer bg-light">
-        <div class="container">
-            <div class="row g-5 align-items-start">
-                <div class="col-lg-7 order-lg-1 order-2">
-                    <div class="contact-card">
-                        <h3 class="h4 mb-4">Deneme Dersi Talep Formu</h3>
-                        <?php if ($notice = getFlash('contact_form')): ?>
-                            <?php $noticeType = is_array($notice) ? ($notice['type'] ?? 'success') : 'success'; ?>
-                            <?php $noticeMessage = is_array($notice) ? ($notice['message'] ?? '') : $notice; ?>
-                            <?php if ($noticeMessage): ?>
-                                <div class="alert <?= $noticeType === 'error' ? 'error' : 'success'; ?>"><?= htmlspecialchars($noticeMessage); ?></div>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                        <form action="process_contact.php" method="post" class="row g-3">
-                            <input type="hidden" name="csrf_token" value="<?= csrfToken(); ?>">
-                            <div class="col-md-6">
-                                <label for="name" class="form-label">Ad Soyad</label>
-                                <input type="text" id="name" name="name" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="phone" class="form-label">Telefon</label>
-                                <input type="tel" id="phone" name="phone" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="email" class="form-label">E-posta</label>
-                                <input type="email" id="email" name="email" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="preference" class="form-label">Ders Tercihi</label>
-                                <input type="text" id="preference" name="preference" class="form-control" placeholder="Birebir, ikili, grup...">
-                            </div>
-                            <div class="col-12">
-                                <label for="message" class="form-label">Mesajınız</label>
-                                <textarea id="message" name="message" rows="4" class="form-control" placeholder="Beklentilerinizi ve hedeflerinizi paylaşın..."></textarea>
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary btn-lg">Gönder</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-                <div class="col-lg-5 order-lg-2 order-1">
-                    <p class="section-title">İletişim</p>
-                    <h2 class="section-heading mb-3">Pi Studio Pilates&#39;e Ulaşın</h2>
-                    <p class="section-lead mb-4">Deneme dersi talepleriniz, paket sorularınız ve stüdyomuza dair merak ettikleriniz için bize ulaşın.</p>
-                    <div class="contact-details">
-                        <p><strong>Telefon:</strong> <a href="tel:<?= htmlspecialchars(preg_replace('/\s+/', '', $contactPhone)); ?>"><?= htmlspecialchars($contactPhone); ?></a></p>
-                        <p><strong>E-posta:</strong> <a href="mailto:<?= htmlspecialchars($contactEmail); ?>"><?= htmlspecialchars($contactEmail); ?></a></p>
-                        <p><strong>Adres:</strong> <?= htmlspecialchars($address); ?></p>
-                    </div>
-                    <div class="map-responsive mt-4">
-                        <?php
-                        $mapEmbed = $hero['map_embed'] ?? '';
-                        if ($mapEmbed && stripos($mapEmbed, '<iframe') !== false) {
-                            echo $mapEmbed;
-                        } else {
-                            $mapSrc = $mapEmbed ?: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3010.715183116564!2d28.97953!3d41.015137!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDFsw4AwMCcwNi4xIk4gMjjCsDE5JzA2LjMiRQ!5e0!3m2!1str!2str!4v1700000000000';
-                            ?>
-                            <div class="ratio ratio-4x3">
-                                <iframe src="<?= htmlspecialchars($mapSrc); ?>" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-                            </div>
-                            <?php
-                        }
-                        ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-</main>
+    </div>
+</section>
+<?php endif; ?>
 
 <footer class="footer">
     <div class="container">
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="brand">
-                    <?php if ($logoUrl): ?>
-                        <img src="<?= htmlspecialchars($logoUrl); ?>" alt="<?= htmlspecialchars($siteName); ?>">
-                    <?php endif; ?>
-                    <p class="mb-2 fw-semibold text-white"><?= htmlspecialchars($siteName); ?></p>
-                    <p><?= htmlspecialchars($tagline); ?></p>
-                </div>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4><?php echo escape($siteName); ?></h4>
+                <p><?php echo $lang === 'tr' ? 'Profesyonel Pilates Eğitimi' : 'Professional Pilates Training'; ?></p>
             </div>
-            <div class="col-lg-4 col-md-6">
-                <h5>Menü</h5>
-                <ul class="list-unstyled d-grid gap-2">
-                    <li><a href="#about">Pilates Nedir?</a></li>
-                    <li><a href="#equipments">Ekipmanlar</a></li>
-                    <li><a href="#plans">Üyelik</a></li>
-                    <li><a href="#faq">S.S.S.</a></li>
-                    <li><a href="#contact">İletişim</a></li>
-                </ul>
+
+            <div class="footer-section">
+                <h4><?php echo $lang === 'tr' ? 'İletişim' : 'Contact'; ?></h4>
+                <p>
+                    <a href="<?php echo escape($whatsappLink); ?>" target="_blank" rel="noopener">
+                        <?php echo escape($whatsappNumber); ?>
+                    </a>
+                </p>
+                <p>
+                    <a href="mailto:<?php echo escape($contactEmail); ?>">
+                        <?php echo escape($contactEmail); ?>
+                    </a>
+                </p>
             </div>
-            <div class="col-lg-4 col-md-6">
-                <h5>Bağlantılar</h5>
-                <div class="d-flex align-items-center gap-3 mb-3 social-links">
-                    <a href="<?= htmlspecialchars($instagramUrl); ?>" aria-label="Instagram" target="_blank" rel="noopener">
-                        <i class="bi bi-instagram"></i>
-                    </a>
-                    <a href="<?= htmlspecialchars($whatsappLink); ?>" aria-label="WhatsApp" target="_blank" rel="noopener">
-                        <i class="bi bi-whatsapp"></i>
-                    </a>
+
+            <div class="footer-section">
+                <h4><?php echo $lang === 'tr' ? 'Sosyal Medya' : 'Social Media'; ?></h4>
+                <div class="social-links">
+                    <a href="<?php echo escape($instagramStudio); ?>" target="_blank" rel="noopener">Instagram (Studio)</a>
+                    <a href="<?php echo escape($instagramInstructor); ?>" target="_blank" rel="noopener">Instagram (<?php echo $lang === 'tr' ? 'Eğitmen' : 'Instructor'; ?>)</a>
                 </div>
-                <ul class="list-unstyled d-grid gap-2">
-                    <?php foreach ($footerLinks as $link): ?>
-                        <li><a href="<?= htmlspecialchars($link['url']); ?>" target="<?= $link['target'] === '_blank' ? '_blank' : '_self'; ?>" rel="<?= $link['target'] === '_blank' ? 'noopener' : 'nofollow'; ?>"><?= htmlspecialchars($link['label']); ?></a></li>
-                    <?php endforeach; ?>
-                </ul>
             </div>
         </div>
-        <div class="bottom-bar text-center mt-4">
-            <small>&copy; <span data-current-year></span> <?= htmlspecialchars($siteName); ?>. Tüm hakları saklıdır.</small>
+
+        <div class="footer-bottom">
+            <p>&copy; <?php echo date('Y'); ?> <?php echo escape($siteName); ?>. <?php echo $lang === 'tr' ? 'Tüm hakları saklıdır.' : 'All rights reserved.'; ?></p>
         </div>
     </div>
 </footer>
 
-<div class="floating-whatsapp">
-    <a class="btn btn-success btn-lg d-flex align-items-center gap-2" href="<?= htmlspecialchars($whatsappLink); ?>" target="_blank" rel="noopener">
-        <span>WhatsApp</span>
-    </a>
-</div>
+<a href="<?php echo escape($whatsappLink); ?>" class="whatsapp-float" target="_blank" rel="noopener" aria-label="WhatsApp">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.48 2 2 6.48 2 12C2 13.87 2.57 15.64 3.56 17.13L2.05 21.95L7.05 20.47C8.48 21.36 10.18 21.88 12 21.88C17.52 21.88 22 17.4 22 11.88C22 6.36 17.52 1.88 12 1.88M12.05 3.88C16.42 3.88 20 7.46 20 11.83C20 16.2 16.42 19.78 12.05 19.78C10.53 19.78 9.11 19.36 7.88 18.62L7.55 18.43L4.43 19.26L5.28 16.22L5.06 15.87C4.24 14.61 3.78 13.13 3.78 11.58C3.78 7.21 7.36 3.63 11.73 3.63M8.5 7.5C8.32 7.5 8.03 7.57 7.8 7.85C7.57 8.13 6.9 8.75 6.9 9.98C6.9 11.21 7.82 12.4 7.95 12.58C8.08 12.76 9.72 15.36 12.23 16.43C14.4 17.34 14.74 17.2 15.11 17.17C15.48 17.14 16.5 16.56 16.72 15.96C16.94 15.36 16.94 14.84 16.88 14.73C16.82 14.62 16.64 14.56 16.37 14.43C16.1 14.3 14.88 13.68 14.63 13.59C14.38 13.5 14.2 13.46 14.02 13.73C13.84 14 13.35 14.58 13.2 14.76C13.05 14.94 12.9 14.96 12.63 14.83C12.36 14.7 11.49 14.43 10.45 13.5C9.64 12.77 9.09 11.88 8.94 11.61C8.79 11.34 8.92 11.2 9.05 11.07C9.17 10.95 9.32 10.75 9.45 10.6C9.58 10.45 9.62 10.34 9.71 10.16C9.8 9.98 9.76 9.83 9.69 9.7C9.62 9.57 9.09 8.34 8.86 7.81C8.63 7.28 8.4 7.35 8.25 7.34C8.1 7.33 7.92 7.33 7.74 7.33" fill="currentColor"/>
+    </svg>
+</a>
 
-<?php foreach ($equipments as $equipment): ?>
-    <?php if (!empty($equipment['more_info'])): ?>
-        <div class="modal fade" id="equipmentModal<?= (int)$equipment['id']; ?>" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><?= htmlspecialchars($equipment['title']); ?></h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
-                    </div>
-                    <div class="modal-body">
-                        <?= nl2br(htmlspecialchars($equipment['more_info'])); ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-<?php endforeach; ?>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-<script src="<?= ASSET_URL ?>js/main.js"></script>
+<script>
+const videoPlaylist = <?php echo json_encode($videoPlaylist); ?>;
+</script>
+<script src="/assets/js/main.js"></script>
 </body>
 </html>

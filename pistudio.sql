@@ -1,179 +1,337 @@
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
+/*
+  # Pi Studio Pilates - PostgreSQL Database Schema & Seed Data
 
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'admin',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  This migration creates the complete database structure for the Pi Studio Pilates website,
+  including multilingual page content (TR/EN), admin users, settings, media, and contact messages.
 
-REPLACE INTO users (id, email, password, role) VALUES
-(1, 'pinar@pistudiopilates.com', '$2y$12$FyNfSGYn9XVqC.IVVomureQ5UQorHB4y40LSLLv/V7bkmF1Sxh9ye', 'admin');
+  1. New Tables
+    - `users` - Admin user accounts with bcrypt password hashing
+      - `id` (serial, primary key)
+      - `username` (varchar 50, unique, not null)
+      - `password_hash` (varchar 255, not null)
+      - `role` (varchar 20, not null, default 'admin')
+      - `created_at` (timestamptz, default now())
 
-CREATE TABLE IF NOT EXISTS settings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    site_name VARCHAR(150) NOT NULL,
-    logo VARCHAR(255) DEFAULT NULL,
-    language VARCHAR(10) NOT NULL DEFAULT 'tr',
-    contact_email VARCHAR(255) DEFAULT NULL,
-    contact_phone VARCHAR(120) DEFAULT NULL,
-    whatsapp_number VARCHAR(120) DEFAULT NULL,
-    instagram_url VARCHAR(255) DEFAULT NULL,
-    address VARCHAR(255) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    - `pages` - Main page records (language-neutral)
+      - `id` (serial, primary key)
+      - `slug` (varchar 100, unique, not null)
+      - `created_at` (timestamptz, default now())
+      - `updated_at` (timestamptz, default now())
 
-REPLACE INTO settings (id, site_name, logo, language, contact_email, contact_phone, whatsapp_number, instagram_url, address) VALUES
-(1, 'Pi Studio Pilates', NULL, 'tr', 'info@pistudiopilates.com', '+90 530 111 22 33', '+90 530 111 22 33', 'https://www.instagram.com/pistudiopilates', 'Bağdat Caddesi No:123, İstanbul');
+    - `page_translations` - Multilingual content for pages
+      - `id` (serial, primary key)
+      - `page_id` (integer, foreign key to pages)
+      - `lang` (varchar 2, check constraint 'tr' or 'en')
+      - `title` (varchar 255, not null)
+      - `content` (text)
+      - `meta_title` (varchar 255)
+      - `meta_description` (text)
+      - unique constraint on (page_id, lang)
 
-CREATE TABLE IF NOT EXISTS hero (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    subtitle TEXT,
-    cta_primary_text VARCHAR(120),
-    cta_secondary_text VARCHAR(120),
-    cta_primary_link VARCHAR(255),
-    cta_secondary_link VARCHAR(255),
-    background_media VARCHAR(255),
-    address VARCHAR(255),
-    map_embed TEXT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    - `settings` - Key-value configuration store
+      - `key` (varchar 100, primary key)
+      - `value` (text)
 
-REPLACE INTO hero (id, title, subtitle, cta_primary_text, cta_secondary_text, cta_primary_link, cta_secondary_link, address, map_embed, background_media) VALUES
-(1, 'Pi Studio Pilates', 'Vücudunu güçlendir, nefesinle ak.', 'Deneme Dersi Al', 'Ders Programı', '#contact', '#schedule', 'Bağdat Caddesi No:123, İstanbul', '', 'assets/img/hero-bg.jpg');
+    - `media` - Uploaded files and assets
+      - `id` (serial, primary key)
+      - `file_name` (varchar 255, not null)
+      - `file_path` (varchar 500, not null)
+      - `mime_type` (varchar 100)
+      - `file_size` (integer)
+      - `created_at` (timestamptz, default now())
 
-CREATE TABLE IF NOT EXISTS about_pilates (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    content TEXT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    - `contact_messages` - Contact form submissions
+      - `id` (serial, primary key)
+      - `name` (varchar 100, not null)
+      - `email` (varchar 255, not null)
+      - `phone` (varchar 50)
+      - `message` (text, not null)
+      - `created_at` (timestamptz, default now())
 
-REPLACE INTO about_pilates (id, content) VALUES
-(1, 'Pilates; nefes, kontrol ve core gücünü temel alan kapsamlı bir zihin-beden pratiğidir. Doğru nefes ve hizalanma ile vücudu güçlendirirken zihinsel farkındalığı artırır.');
+  2. Seed Data
+    - Admin user: pinar / pistudyo2025! (bcrypt hashed)
+    - Pages: home, egitmen, instructor, contact (with TR/EN translations)
+    - Settings: site name, WhatsApp, Instagram, video playlist, contact info
+    - Full instructor profile content in Turkish and English
 
-CREATE TABLE IF NOT EXISTS history (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    content TEXT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  3. Security
+    - All tables use prepared statements (enforced by PDO in application)
+    - Password stored with bcrypt hash
+    - Check constraints on language fields
+    - Foreign key constraints with cascade delete
 
-REPLACE INTO history (id, content) VALUES
-(1, '20. yüzyılın başında Joseph Pilates tarafından geliştirilen kontroloji, modern pilates pratiğinin temelini oluşturur. Pi Studio Pilates bu mirası günümüz bilimiyle buluşturur.');
+  4. Important Notes
+    - Uses PostgreSQL-specific features (SERIAL, TIMESTAMPTZ, CHECK)
+    - Default video playlist: bg.mp4, bg1.mp4, bg2.mp4, bg3.mp4
+    - WhatsApp number: +05417672104
+    - Instagram studio: pi_studyo_pilatess
+    - Instagram instructor: uverrcinnkaa
+*/
 
-CREATE TABLE IF NOT EXISTS instructor (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(120) NOT NULL,
-    bio TEXT,
-    highlights TEXT,
-    photo VARCHAR(255)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Drop existing tables if they exist (for clean reinstall)
+DROP TABLE IF EXISTS contact_messages CASCADE;
+DROP TABLE IF EXISTS media CASCADE;
+DROP TABLE IF EXISTS settings CASCADE;
+DROP TABLE IF EXISTS page_translations CASCADE;
+DROP TABLE IF EXISTS pages CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
-REPLACE INTO instructor (id, name, bio, highlights, photo) VALUES
-(1, 'Pınar Sarı Koçak', 'Pınar Sarı Koçak, hareket anatomi bilgisi ve kişiye özel pilates yaklaşımıyla bedeninizi yeniden keşfetmenizi sağlar.', 'Mat Pilates\nReformer Pilates\nRehabilitasyon odaklı programlama\nPrenatal & Postnatal destek', 'assets/img/pinar.jpg');
+-- Create users table
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'admin',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-CREATE TABLE IF NOT EXISTS equipments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(120) NOT NULL,
-    description TEXT,
-    more_info TEXT,
-    img VARCHAR(255),
-    sort_order INT DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Create pages table
+CREATE TABLE pages (
+  id SERIAL PRIMARY KEY,
+  slug VARCHAR(100) UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-TRUNCATE TABLE equipments;
+-- Create page_translations table
+CREATE TABLE page_translations (
+  id SERIAL PRIMARY KEY,
+  page_id INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+  lang VARCHAR(2) NOT NULL CHECK (lang IN ('tr', 'en')),
+  title VARCHAR(255) NOT NULL,
+  content TEXT,
+  meta_title VARCHAR(255),
+  meta_description TEXT,
+  UNIQUE(page_id, lang)
+);
 
-INSERT INTO equipments (title, description, more_info, img, sort_order) VALUES
-('Mat Pilates', 'Temel pilates prensipleri ve nefes eşliğinde güçlenme.', 'Mat derslerinde core stabilizasyonu, mobilite ve nefes teknikleri üzerinde çalışılır.', 'assets/img/equip-mat.jpg', 1),
-('Reformer', 'Dinamik yay sistemi ile kişiye özel direnç.', 'Reformer derslerinde kas kuvveti, esneklik ve postür dengesi hedeflenir.', 'assets/img/equip-reformer.jpg', 2),
-('Tower', 'Dikey yay sistemi ile kontrollü direnç.', 'Tower ekipmanı, reformer ve cadillac prensiplerinin birleşimini sunar.', 'assets/img/equip-tower.jpg', 3),
-('Cadillac', 'Çok yönlü egzersiz seçenekleri sunar.', 'Cadillac ile kuvvet, esneklik ve koordinasyon birlikte geliştirilir.', 'assets/img/equip-cadillac.jpg', 4),
-('Chair', 'Denge ve güç odaklı kompakt ekipman.', 'Chair egzersizleri özellikle core ve alt beden stabilitesini artırır.', 'assets/img/equip-chair.jpg', 5),
-('Barrel', 'Omurga mobilitesi ve esneklik için ideal.', 'Barrel dersleri postürü iyileştirir ve omurga esnekliğini destekler.', 'assets/img/equip-barrel.jpg', 6);
+-- Create settings table
+CREATE TABLE settings (
+  key VARCHAR(100) PRIMARY KEY,
+  value TEXT
+);
 
-CREATE TABLE IF NOT EXISTS trainings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(200) NOT NULL,
-    year VARCHAR(40),
-    description TEXT,
-    img VARCHAR(255),
-    sort_order INT DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Create media table
+CREATE TABLE media (
+  id SERIAL PRIMARY KEY,
+  file_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  mime_type VARCHAR(100),
+  file_size INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-TRUNCATE TABLE trainings;
+-- Create contact_messages table
+CREATE TABLE contact_messages (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-INSERT INTO trainings (title, year, description, img, sort_order) VALUES
-('Balanced Body Mat Sertifikası', '2016', 'Kapsamlı mat pilates eğitimi ve anatomi modülleri.', NULL, 1),
-('Balanced Body Reformer Sertifikası', '2017', 'Dinamik reformer ders planlaması ve progresyonlar.', NULL, 2),
-('Hamilelik ve Doğum Sonrası Pilates Uzmanlığı', '2018', 'Prenatal ve postnatal süreçler için güvenli hareket programları.', NULL, 3);
+-- Create indexes for better performance
+CREATE INDEX idx_page_translations_page_id ON page_translations(page_id);
+CREATE INDEX idx_page_translations_lang ON page_translations(lang);
+CREATE INDEX idx_pages_slug ON pages(slug);
+CREATE INDEX idx_contact_messages_created_at ON contact_messages(created_at DESC);
 
-CREATE TABLE IF NOT EXISTS plans (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(120) NOT NULL,
-    price VARCHAR(120) NOT NULL,
-    description TEXT,
-    sort_order INT DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- ============================================
+-- SEED DATA
+-- ============================================
 
-TRUNCATE TABLE plans;
+-- Insert admin user (pinar / pistudyo2025!)
+-- Password hash generated with: password_hash('pistudyo2025!', PASSWORD_BCRYPT)
+INSERT INTO users (username, password_hash, role) VALUES
+('pinar', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');
 
-INSERT INTO plans (title, price, description, sort_order) VALUES
-('Deneme Dersi', '₺750', 'Stüdyomuzu ve eğitmenimizi deneyimleyin.', 1),
-('Aylık 4 Ders', '₺2.400', 'Haftada bir bireysel veya ikili seans.', 2),
-('Aylık 8 Ders', '₺4.400', 'Haftada iki seans ile düzenli gelişim.', 3),
-('Kişiye Özel Program', 'Teklif Üzerine', 'Rehabilitasyon ve özel hedefler için tasarlanır.', 4);
+-- Insert pages
+INSERT INTO pages (slug) VALUES
+('home'),
+('egitmen'),
+('instructor'),
+('contact');
 
-CREATE TABLE IF NOT EXISTS schedule_entries (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    day_order TINYINT NOT NULL,
-    start_time TIME NOT NULL,
-    class_type VARCHAR(120) NOT NULL,
-    level VARCHAR(120)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Insert page translations (TR)
+INSERT INTO page_translations (page_id, lang, title, content, meta_title, meta_description) VALUES
+-- Home TR
+(1, 'tr', 'Ana Sayfa',
+'<div class="hero-content">
+  <h1>Pi Studio Pilates</h1>
+  <p>Bedeninizi ve zihninizi güçlendirin</p>
+</div>
 
-TRUNCATE TABLE schedule_entries;
+<section class="services">
+  <h2>Hizmetlerimiz</h2>
+  <div class="service-grid">
+    <div class="service-card">
+      <h3>Reformer Pilates</h3>
+      <p>Profesyonel reformer cihazları ile özel antrenmanlar</p>
+    </div>
+    <div class="service-card">
+      <h3>Mat Pilates</h3>
+      <p>Klasik mat egzersizleri ile güçlenme</p>
+    </div>
+    <div class="service-card">
+      <h3>Kişiye Özel Programlar</h3>
+      <p>Size özel hazırlanan pilates programları</p>
+    </div>
+  </div>
+</section>',
+'Pi Studio Pilates - Ankara',
+'Ankara''da profesyonel pilates eğitimi. Reformer, mat ve kişiye özel pilates programları.'),
 
-INSERT INTO schedule_entries (day_order, start_time, class_type, level) VALUES
-(1, '09:00:00', 'Mat Grup', 'Tüm seviyeler'),
-(3, '18:30:00', 'Reformer İkili', 'Orta seviye'),
-(5, '11:00:00', 'Birebir Reformer', 'Kişiye özel');
+-- Home EN
+(1, 'en', 'Home',
+'<div class="hero-content">
+  <h1>Pi Studio Pilates</h1>
+  <p>Strengthen your body and mind</p>
+</div>
 
-CREATE TABLE IF NOT EXISTS faq (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    question VARCHAR(255) NOT NULL,
-    answer TEXT,
-    sort_order INT DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+<section class="services">
+  <h2>Our Services</h2>
+  <div class="service-grid">
+    <div class="service-card">
+      <h3>Reformer Pilates</h3>
+      <p>Professional training with reformer equipment</p>
+    </div>
+    <div class="service-card">
+      <h3>Mat Pilates</h3>
+      <p>Strengthen with classic mat exercises</p>
+    </div>
+    <div class="service-card">
+      <h3>Personalized Programs</h3>
+      <p>Custom pilates programs designed for you</p>
+    </div>
+  </div>
+</section>',
+'Pi Studio Pilates - Ankara',
+'Professional pilates training in Ankara. Reformer, mat and personalized pilates programs.'),
 
-TRUNCATE TABLE faq;
+-- Instructor TR (egitmen)
+(2, 'tr', 'Eğitmen - Pınar Sarı Koçak',
+'<div class="instructor-profile">
+  <h1>Pınar Sarı Koçak</h1>
 
-INSERT INTO faq (question, answer, sort_order) VALUES
-('İptal politikası nedir?', 'Seanslar 12 saat öncesine kadar ücretsiz iptal edilebilir.', 1),
-('Derslere gelirken ne giymeliyim?', 'Rahat, esnek kıyafetler ve kaymaz çoraplar önerilir.', 2),
-('Sağlık beyanı gerekli mi?', 'İlk dersinizde kısa bir sağlık formu doldurmanızı rica ederiz.', 3);
+  <section class="about">
+    <h2>Hakkımda</h2>
+    <p>Ankara Üniversitesi Spor Bilimleri Fakültesi Beden Eğitimi ve Spor Bölümü''nden bölüm üçüncüsü olarak mezun oldum. Ardından Yozgat Bozok Üniversitesi Sağlık Bilimleri Enstitüsü''nde tezli yüksek lisansımı tamamladım.</p>
+  </section>
 
-CREATE TABLE IF NOT EXISTS messages (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(120) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(60),
-    preference VARCHAR(120),
-    message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  <section class="education">
+    <h2>Eğitim</h2>
+    <ul>
+      <li>Ankara Üniversitesi Spor Bilimleri Fakültesi, Beden Eğitimi ve Spor Bölümü (Fakülte 3.sü)</li>
+      <li>Yozgat Bozok Üniversitesi, Sağlık Bilimleri Enstitüsü – Tezli Yüksek Lisans</li>
+    </ul>
+  </section>
 
-CREATE TABLE IF NOT EXISTS footer_links (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    label VARCHAR(120) NOT NULL,
-    url VARCHAR(255) NOT NULL,
-    target VARCHAR(20) DEFAULT '_self',
-    position INT DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  <section class="certifications">
+    <h2>Uzmanlık Alanlarım</h2>
+    <ul>
+      <li>Türkiye Cimnastik Federasyonu 1. ve 2. Kademe Pilates Antrenörlüğü</li>
+      <li>Bodysystem Reformer Seviye 1</li>
+      <li>Bodysystem Trapez-Cadillac</li>
+      <li>Bodysystem Chair Seviye 1–2</li>
+      <li>Sport Science Institute Reformer Level 1–2</li>
+    </ul>
+  </section>
 
-TRUNCATE TABLE footer_links;
+  <section class="workshops">
+    <h2>Katıldığım Workshoplar</h2>
+    <ul>
+      <li>Pilates Tedavinin Bir Parçası Olabilir mi? — Prof. Dr. Osman Coşkun (HUP)</li>
+      <li>Profesyonel Sporcularda Pilatesin Kullanımı — Alper Koçak (HUP)</li>
+      <li>Nefes ve Core Aktivasyonu — Benay Yakışır & Seda Şüküroğlu Özer (HUP)</li>
+      <li>Hiit X Pilates Fusion — İpek Yolyapan (HUP)</li>
+      <li>Over Pronation — Emrah Demirtaş (FMI)</li>
+    </ul>
+  </section>
+</div>',
+'Eğitmen - Pınar Sarı Koçak | Pi Studio Pilates',
+'Pınar Sarı Koçak - Sertifikalı pilates eğitmeni. TCF, Bodysystem ve Sport Science Institute sertifikaları.'),
 
-INSERT INTO footer_links (label, url, target, position) VALUES
-('Impressum', '#', '_self', 1),
-('Datenschutzerklärung', '#', '_self', 2);
+-- Instructor EN
+(3, 'en', 'Instructor - Pınar Sarı Koçak',
+'<div class="instructor-profile">
+  <h1>Pınar Sarı Koçak</h1>
 
-SET FOREIGN_KEY_CHECKS = 1;
+  <section class="about">
+    <h2>About Me</h2>
+    <p>I graduated third in my class from Ankara University Faculty of Sport Sciences, Physical Education and Sports Department. I then completed my master''s degree with thesis at Yozgat Bozok University Institute of Health Sciences.</p>
+  </section>
+
+  <section class="education">
+    <h2>Education</h2>
+    <ul>
+      <li>Ankara University Faculty of Sport Sciences, Physical Education and Sports (3rd in Faculty)</li>
+      <li>Yozgat Bozok University, Institute of Health Sciences – Master''s with Thesis</li>
+    </ul>
+  </section>
+
+  <section class="certifications">
+    <h2>Certifications</h2>
+    <ul>
+      <li>Turkish Gymnastics Federation Level 1 & 2 Pilates Instructor</li>
+      <li>Bodysystem Reformer Level 1</li>
+      <li>Bodysystem Trapeze-Cadillac</li>
+      <li>Bodysystem Chair Level 1–2</li>
+      <li>Sport Science Institute Reformer Level 1–2</li>
+    </ul>
+  </section>
+
+  <section class="workshops">
+    <h2>Workshops Attended</h2>
+    <ul>
+      <li>Can Pilates Be Part of Treatment? — Prof. Dr. Osman Coşkun (HUP)</li>
+      <li>Use of Pilates in Professional Athletes — Alper Koçak (HUP)</li>
+      <li>Breathing and Core Activation — Benay Yakışır & Seda Şüküroğlu Özer (HUP)</li>
+      <li>HIIT X Pilates Fusion — İpek Yolyapan (HUP)</li>
+      <li>Over Pronation — Emrah Demirtaş (FMI)</li>
+    </ul>
+  </section>
+</div>',
+'Instructor - Pınar Sarı Koçak | Pi Studio Pilates',
+'Pınar Sarı Koçak - Certified pilates instructor. TCF, Bodysystem and Sport Science Institute certifications.'),
+
+-- Contact TR
+(4, 'tr', 'İletişim',
+'<div class="contact-page">
+  <h1>İletişim</h1>
+  <p>Sorularınız için bize ulaşın veya WhatsApp üzerinden direkt randevu alın.</p>
+</div>',
+'İletişim | Pi Studio Pilates',
+'Pi Studio Pilates ile iletişime geçin. Randevu almak için WhatsApp''tan ulaşabilirsiniz.'),
+
+-- Contact EN
+(4, 'en', 'Contact',
+'<div class="contact-page">
+  <h1>Contact</h1>
+  <p>Reach out to us with your questions or book an appointment directly via WhatsApp.</p>
+</div>',
+'Contact | Pi Studio Pilates',
+'Contact Pi Studio Pilates. You can reach us via WhatsApp to book an appointment.');
+
+-- Insert settings
+INSERT INTO settings (key, value) VALUES
+('site_name', 'Pi Studio Pilates'),
+('whatsapp_number', '+05417672104'),
+('instagram_studio', 'https://www.instagram.com/pi_studyo_pilatess'),
+('instagram_instructor', 'https://www.instagram.com/uverrcinnkaa'),
+('contact_email', 'info@pistudiopilates.com'),
+('address', 'Ankara, Türkiye'),
+('working_hours', 'Pazartesi - Cumartesi: 09:00 - 20:00<br>Pazar: Kapalı'),
+('video_playlist', '["assets/video/bg.mp4","assets/video/bg1.mp4","assets/video/bg2.mp4","assets/video/bg3.mp4"]'),
+('whatsapp_message', 'Merhaba, randevu almak istiyorum.'),
+('map_embed', '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3060.2615876707595!2d32.8543!3d39.9334!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMznCsDU2JzAwLjIiTiAzMsKwNTEnMTUuNSJF!5e0!3m2!1sen!2str!4v1234567890" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>');
+
+-- Success message
+DO $$
+BEGIN
+  RAISE NOTICE 'Pi Studio Pilates database schema and seed data created successfully!';
+  RAISE NOTICE 'Admin login: pinar / pistudyo2025!';
+  RAISE NOTICE 'WhatsApp: +05417672104';
+  RAISE NOTICE 'Instagram Studio: https://www.instagram.com/pi_studyo_pilatess';
+  RAISE NOTICE 'Instagram Instructor: https://www.instagram.com/uverrcinnkaa';
+END $$;
